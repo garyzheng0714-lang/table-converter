@@ -1,0 +1,187 @@
+import { useMemo, useRef, useState } from 'react';
+import type { AppConfig, ParsedData, ScriptConfig } from '../types';
+import { generateFileName } from '../lib/transform';
+import DataCard from './DataCard';
+import ScriptCard from './ScriptCard';
+import ChatPreview from './ChatPreview';
+
+interface ConfigPanelProps {
+  parsedData: ParsedData;
+  fileName: string;
+  config: AppConfig;
+  onConfigChange: (config: AppConfig) => void;
+  onBack: () => void;
+  onNext: () => void;
+}
+
+let scriptIdCounter = 10;
+
+export default function ConfigPanel({
+  parsedData,
+  fileName,
+  config,
+  onConfigChange,
+  onBack,
+  onNext,
+}: ConfigPanelProps) {
+  const { rows } = parsedData;
+  const genFileName = generateFileName(config.wechatId);
+
+  const sampleName = useMemo(() => {
+    if (rows.length === 0) return '张总';
+    return rows[0][config.columnMapping.nameForConcatColumn] || '张总';
+  }, [rows, config.columnMapping.nameForConcatColumn]);
+
+  /* ---- Drag ---- */
+  const dragIdx = useRef<number | null>(null);
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => (e: React.DragEvent) => {
+    dragIdx.current = index;
+    setDraggingIdx(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleDragOver = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setOverIdx(index);
+  };
+  const handleDragEnd = () => {
+    if (dragIdx.current !== null && overIdx !== null && dragIdx.current !== overIdx) {
+      const next = [...config.scripts];
+      const [moved] = next.splice(dragIdx.current, 1);
+      next.splice(overIdx, 0, moved);
+      onConfigChange({ ...config, scripts: next });
+    }
+    dragIdx.current = null;
+    setDraggingIdx(null);
+    setOverIdx(null);
+  };
+
+  /* ---- CRUD ---- */
+  const updateMapping = (
+    field: keyof AppConfig['columnMapping'],
+    value: string
+  ) => {
+    onConfigChange({
+      ...config,
+      columnMapping: { ...config.columnMapping, [field]: value },
+    });
+  };
+
+  const updateScript = (index: number, updated: ScriptConfig) => {
+    const next = [...config.scripts];
+    next[index] = updated;
+    onConfigChange({ ...config, scripts: next });
+  };
+
+  const addScript = () => {
+    if (config.scripts.length >= 5) return;
+    onConfigChange({
+      ...config,
+      scripts: [
+        ...config.scripts,
+        {
+          id: String(++scriptIdCounter),
+          type: 'text',
+          text: '',
+          articleIndex: 1,
+          prependName: false,
+        },
+      ],
+    });
+  };
+
+  const deleteScript = (index: number) =>
+    onConfigChange({
+      ...config,
+      scripts: config.scripts.filter((_, i) => i !== index),
+    });
+
+  const canProceed =
+    config.wechatId.trim() !== '' &&
+    config.scripts.some((s) => s.text.trim() !== '');
+
+  return (
+    <div className="config-layout">
+      <div className="config-main">
+        {/* Compact file bar */}
+        <DataCard
+          parsedData={parsedData}
+          fileName={fileName}
+          config={config}
+          onMappingChange={updateMapping}
+        />
+
+        {/* Everything in one flowing form */}
+        <div className="config-form">
+          {/* WeChat ID — compact inline */}
+          <div className="form-field">
+            <label className="form-label">你的微信号</label>
+            <div className="form-row">
+              <input
+                className="form-input"
+                type="text"
+                value={config.wechatId}
+                onChange={(e) =>
+                  onConfigChange({ ...config, wechatId: e.target.value })
+                }
+                placeholder="用于生成文件名，方便辨认"
+              />
+              {config.wechatId && (
+                <span className="form-hint">
+                  文件名：{genFileName}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Scripts */}
+          <div className="form-field">
+            <label className="form-label">要发送的消息</label>
+            <div className="scripts-list">
+              {config.scripts.map((script, i) => (
+                <ScriptCard
+                  key={script.id}
+                  script={script}
+                  index={i}
+                  sampleName={sampleName}
+                  canDelete={config.scripts.length > 1}
+                  onChange={(u) => updateScript(i, u)}
+                  onDelete={() => deleteScript(i)}
+                  onDragStart={handleDragStart(i)}
+                  onDragOver={handleDragOver(i)}
+                  onDragEnd={handleDragEnd}
+                  isDragging={draggingIdx === i}
+                  isOver={overIdx === i && draggingIdx !== i}
+                />
+              ))}
+            </div>
+            {config.scripts.length < 5 && (
+              <button className="link-btn" onClick={addScript}>
+                + 添加话术
+              </button>
+            )}
+          </div>
+
+          {/* Actions — next is the only primary */}
+          <div className="config-actions">
+            <button className="link-btn" onClick={onBack}>重新上传</button>
+            <button
+              className="btn btn-primary"
+              disabled={!canProceed}
+              onClick={onNext}
+            >
+              下一步：预览效果
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <aside className="config-sidebar">
+        <ChatPreview scripts={config.scripts} sampleName={sampleName} />
+      </aside>
+    </div>
+  );
+}
