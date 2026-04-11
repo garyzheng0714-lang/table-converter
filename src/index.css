@@ -204,7 +204,7 @@ body {
   letter-spacing: -.1px;
 }
 .form-label--step {
-  font-size: 16px; font-weight: 700; color: var(--c-text);
+  font-size: 16px; font-weight: 700; color: var(--c-primary);
   font-family: var(--font-display); letter-spacing: -.3px;
 }
 .form-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -363,24 +363,44 @@ body {
 /* ---- Body ---- */
 .sc-body { display: flex; flex-direction: column; gap: 10px; }
 
-/* Textarea */
-.sc-textarea {
-  width: 100%; padding: 10px 12px;
+/* Editor — textarea + emoji overlay */
+.sc-editor {
+  position: relative;
   border: 1.5px solid var(--c-border); border-radius: var(--r-md);
-  font-size: 14px; font-family: var(--font); color: var(--c-text);
-  resize: none; min-height: 44px; outline: none;
-  background: #FAFAF8;
+  background: #FAFAF8; min-height: 80px;
   transition: border-color .2s var(--ease), box-shadow .2s var(--ease), background .2s;
 }
-.sc-textarea:focus {
+.sc-editor:focus-within {
   border-color: var(--c-primary); background: var(--c-surface);
   box-shadow: 0 0 0 3px var(--c-primary-glow);
 }
-.sc-textarea::placeholder { color: var(--c-text-3); }
-.sc-textarea--empty { border-color: #F87171; }
-.sc-textarea--empty:focus { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
-.sc-textarea-wrap { display: flex; flex-direction: column; gap: 4px; }
-.sc-textarea-hint { font-size: 11px; color: #EF4444; }
+.sc-editor--empty { border-color: #F87171; }
+.sc-editor--empty:focus-within { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
+
+.sc-editor-render {
+  padding: 10px 12px;
+  font-size: 14px; font-family: var(--font); color: var(--c-text);
+  line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+  pointer-events: none;
+}
+.sc-editor-render .wx-emoji { vertical-align: text-bottom; }
+
+.sc-editor-input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  padding: 10px 12px; border: none; outline: none;
+  font-size: 14px; font-family: var(--font);
+  line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+  color: transparent; caret-color: var(--c-text);
+  background: transparent; resize: none;
+}
+.sc-editor-input::placeholder { color: var(--c-text-3); }
+/* When no emoji, show normal text color */
+.sc-editor-input:not(:placeholder-shown) { color: transparent; }
+
+.sc-editor-hint {
+  position: absolute; bottom: -18px; left: 0;
+  font-size: 11px; color: #EF4444;
+}
 
 /* Checkbox option */
 .sc-check {
@@ -414,14 +434,6 @@ body {
   color: var(--c-primary);
 }
 .sc-note { font-size: 11px; color: var(--c-text-3); }
-
-/* Emoji rendered preview below textarea */
-.sc-emoji-preview {
-  font-size: 14px; line-height: 1.6; color: var(--c-text);
-  padding: 8px 12px; background: #FAFAF8;
-  border-radius: var(--r-sm); white-space: pre-wrap;
-  word-break: break-all;
-}
 
 
 .config-actions {

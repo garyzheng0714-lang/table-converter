@@ -162,6 +162,9 @@ export default function ConfigPanel({
               {!wechatConfirmed && config.wechatId.trim() === '' && (
                 <span className="form-hint form-hint--warn">必填，用于生成文件名</span>
               )}
+              {config.wechatId && /[\u4e00-\u9fff]/.test(config.wechatId) && (
+                <span className="form-hint form-hint--warn">微信号不应包含中文，请检查</span>
+              )}
 
               {/* Confirmation popup */}
               {showConfirmPopup && (

@@ -101,13 +101,22 @@ function ScriptCard({
             />
             <span>在前面加上客户称呼</span>
           </label>
-          <div className="sc-textarea-wrap">
+          <div className={`sc-editor ${script.text.trim() === '' ? 'sc-editor--empty' : ''}`}>
+            {/* Rendered overlay — shows emoji images */}
+            <div
+              className="sc-editor-render"
+              dangerouslySetInnerHTML={{
+                __html: script.text
+                  ? renderWechatEmojiHTML(script.text, 20)
+                  : '',
+              }}
+            />
+            {/* Actual textarea — transparent text, handles input */}
             <textarea
-              className={`sc-textarea ${script.text.trim() === '' ? 'sc-textarea--empty' : ''}`}
+              className="sc-editor-input"
               value={script.text}
               onChange={(e) => {
                 onChange(index, { ...script, text: e.target.value });
-                // Auto-resize
                 const el = e.target;
                 el.style.height = 'auto';
                 el.style.height = el.scrollHeight + 'px';
@@ -119,19 +128,13 @@ function ScriptCard({
               }}
               placeholder={
                 script.prependName
-                  ? '输入要发的内容，称呼和逗号会自动加在前面\n支持多行和微信表情如 [抱拳][握手]'
-                  : '输入要发送的文字内容\n支持多行和微信表情如 [抱拳][握手]'
+                  ? '输入要发的内容，称呼和逗号会自动加在前面'
+                  : '输入要发送的文字内容，支持微信表情如 [抱拳]'
               }
               rows={3}
             />
             {script.text.trim() === '' && (
-              <span className="sc-textarea-hint">必填，请输入话术内容</span>
-            )}
-            {script.text.includes('[') && (
-              <div
-                className="sc-emoji-preview"
-                dangerouslySetInnerHTML={{ __html: renderWechatEmojiHTML(script.text, 22) }}
-              />
+              <span className="sc-editor-hint">必填，请输入话术内容</span>
             )}
           </div>
         </div>
