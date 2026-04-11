@@ -110,13 +110,24 @@ export default function ScriptCard({
             <textarea
               className={`sc-textarea ${script.text.trim() === '' ? 'sc-textarea--empty' : ''}`}
               value={script.text}
-              onChange={(e) => onChange({ ...script, text: e.target.value })}
+              onChange={(e) => {
+                onChange({ ...script, text: e.target.value });
+                // Auto-resize
+                const el = e.target;
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+              }}
+              onFocus={(e) => {
+                const el = e.target;
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+              }}
               placeholder={
                 script.prependName
-                  ? '输入要发的内容，称呼和逗号会自动加在前面'
-                  : '输入要发送的文字内容'
+                  ? '输入要发的内容，称呼和逗号会自动加在前面\n支持多行和微信表情如 [抱拳][握手]'
+                  : '输入要发送的文字内容\n支持多行和微信表情如 [抱拳][握手]'
               }
-              rows={2}
+              rows={3}
             />
             {script.text.trim() === '' && (
               <span className="sc-textarea-hint">必填，请输入话术内容</span>

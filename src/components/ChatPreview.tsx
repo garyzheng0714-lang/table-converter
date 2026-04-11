@@ -49,7 +49,7 @@ export default function ChatPreview({ scripts, sampleName }: ChatPreviewProps) {
                       </div>
                     </div>
                   ) : (
-                    <div className="cp-bubble">
+                    <div className="cp-bubble" style={{ whiteSpace: 'pre-wrap' }}>
                       {s.prependName && sampleName ? (
                         <>
                           <strong>{sampleName}</strong>，{s.text}

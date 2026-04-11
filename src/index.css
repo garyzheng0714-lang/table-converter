@@ -600,8 +600,8 @@ body {
 .preview-table th.col-empty { color: var(--c-text-3); }
 .preview-table td {
   padding: 9px 14px; border-bottom: 1px solid rgba(0,0,0,.03);
-  color: var(--c-text); max-width: 160px; overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--c-text); max-width: 280px;
+  white-space: pre-wrap; word-break: break-all;
 }
 .preview-table tr:last-child td { border-bottom: none; }
 .preview-table tr:hover td { background: #FAFAF8; }
