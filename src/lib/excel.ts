@@ -126,10 +126,8 @@ export async function writeExcel(
   fileName: string,
   options: WriteExcelOptions = {}
 ): Promise<void> {
-  const wb = buildWorkbook(data, options);
-  const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
-
-  // Try File System Access API (Chrome/Edge) — lets user pick save location
+  // Must call showSaveFilePicker IMMEDIATELY on user click,
+  // before any heavy computation, or the browser revokes the gesture.
   if ('showSaveFilePicker' in window) {
     try {
       const handle = await (window as any).showSaveFilePicker({
@@ -139,16 +137,20 @@ export async function writeExcel(
           accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
         }],
       });
+      // User picked a location — now build the data
+      const wb = buildWorkbook(data, options);
+      const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
       const writable = await handle.createWritable();
       await writable.write(buffer);
       await writable.close();
       return;
     } catch (err: unknown) {
-      // User cancelled the picker — fall through to regular download
       if (err instanceof DOMException && err.name === 'AbortError') return;
+      // API failed for other reason — fall through to regular download
     }
   }
 
-  // Fallback: standard browser download
+  // Fallback: standard browser download (Safari/Firefox)
+  const wb = buildWorkbook(data, options);
   XLSX.writeFile(wb, fileName);
 }
