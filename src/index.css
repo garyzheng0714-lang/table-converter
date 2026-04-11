@@ -21,9 +21,6 @@
   --c-success-soft: #ECFDF5;
   --c-error: #DC2626;
   --c-error-soft: #FEF2F2;
-  --c-warn: #D97706;
-  --c-warn-soft: #FFFBEB;
-  --c-excel: #1D6F42;
 
   /* ---- Typography ---- */
   --font: -apple-system, "SF Pro Text", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
@@ -34,17 +31,13 @@
   --r-md: 10px;
   --r-lg: 16px;
   --r-xl: 20px;
-  --r-full: 9999px;
 
   /* ---- Shadows ---- */
   --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
   --shadow-card: 0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05);
-  --shadow-card-hover: 0 2px 6px rgba(0,0,0,.05), 0 10px 28px rgba(0,0,0,.08);
-  --shadow-elevated: 0 4px 12px rgba(0,0,0,.06), 0 20px 48px rgba(0,0,0,.1);
 
   /* ---- Transitions ---- */
   --ease: cubic-bezier(.4, 0, .2, 1);
-  --dur: 200ms;
 }
 
 /* ---- Reset ---- */
@@ -231,7 +224,6 @@ body {
 .form-input--empty:focus { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
 
 .form-required { color: #EF4444; margin-left: 2px; font-weight: 400; }
-.form-label-hint { font-weight: 400; color: var(--c-text-3); margin-left: 6px; font-size: 12px; }
 
 .form-hint { font-size: 12px; color: var(--c-text-3); }
 .form-hint--warn { color: #EF4444; }
@@ -254,14 +246,6 @@ body {
 }
 .wechat-confirm-actions { display: flex; align-items: center; gap: 8px; }
 .wechat-confirm-actions .btn { padding: 4px 12px; font-size: 12px; }
-
-/* Keep section-title for PreviewPanel */
-.section-title {
-  font-family: var(--font-display);
-  font-size: 15px; font-weight: 700; letter-spacing: -.3px;
-  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
-  color: var(--c-text);
-}
 
 /* ============================================================
    Data Card
@@ -408,9 +392,6 @@ body {
   width: 14px; height: 14px; margin: 0;
   accent-color: var(--c-primary);
 }
-.sc-check-eg {
-  color: var(--c-text-3); font-size: 11px; margin-left: 4px;
-}
 
 /* Article inline */
 .sc-article-row {
@@ -434,14 +415,18 @@ body {
 }
 .sc-note { font-size: 11px; color: var(--c-text-3); }
 
+/* Emoji rendered preview below textarea */
+.sc-emoji-preview {
+  font-size: 14px; line-height: 1.6; color: var(--c-text);
+  padding: 8px 12px; background: #FAFAF8;
+  border-radius: var(--r-sm); white-space: pre-wrap;
+  word-break: break-all;
+}
+
 
 .config-actions {
   display: flex; justify-content: space-between;
   align-items: center; gap: 12px; margin-top: 4px;
-}
-.config-hint {
-  text-align: center; font-size: 12px; color: var(--c-text-3);
-  margin-top: 4px;
 }
 
 /* ============================================================
@@ -583,10 +568,6 @@ body {
   padding: 20px; border: 1px solid var(--c-border);
   box-shadow: var(--shadow-sm);
 }
-.preview-table-title {
-  font-size: 15px; font-weight: 700; margin-bottom: 14px;
-  letter-spacing: -.3px; display: flex; align-items: center; gap: 8px;
-}
 .preview-count { font-size: 12px; font-weight: 400; color: var(--c-text-3); }
 .table-scroll { overflow-x: auto; border-radius: var(--r-sm); border: 1px solid var(--c-border); }
 .preview-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
@@ -595,7 +576,6 @@ body {
   color: var(--c-text-2); text-align: left;
   border-bottom: 1px solid var(--c-border);
 }
-.preview-table th.col-empty { color: var(--c-text-3); }
 .preview-table td {
   padding: 9px 14px; border-bottom: 1px solid rgba(0,0,0,.03);
   color: var(--c-text); max-width: 280px;
@@ -611,15 +591,35 @@ body {
   display: flex; justify-content: space-between;
   align-items: center; gap: 12px; margin-top: 8px;
 }
-.preview-actions-left { display: flex; align-items: center; gap: 8px; }
 
-.download-success {
-  text-align: center; padding: 14px;
-  background: var(--c-success-soft); border-radius: var(--r-md);
-  border: 1px solid #D1FAE5; color: #065F46;
-  font-size: 13px; font-weight: 600;
-  animation: slideUp .25s var(--ease) both;
+/* ---- Download confirmation dialog ---- */
+.dl-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; animation: fadeIn .15s var(--ease);
 }
+.dl-dialog {
+  background: var(--c-surface); border-radius: var(--r-lg);
+  padding: 28px 32px; max-width: 440px; width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  animation: slideUp .2s var(--ease);
+}
+.dl-dialog-title {
+  font-size: 18px; font-weight: 700; color: var(--c-text);
+  font-family: var(--font-display); margin-bottom: 12px;
+}
+.dl-dialog-text { font-size: 14px; color: var(--c-text-2); margin-bottom: 8px; }
+.dl-dialog-path {
+  display: block; background: rgba(0,0,0,.04); padding: 10px 14px;
+  border-radius: var(--r-md); font-family: Consolas, "Courier New", monospace;
+  font-size: 13px; color: var(--c-text); word-break: break-all;
+  margin-bottom: 12px;
+}
+.dl-dialog-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 20px;
+}
+.dl-dialog-btns { display: flex; gap: 8px; }
 
 /* ============================================================
    Responsive

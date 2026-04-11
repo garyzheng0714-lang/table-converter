@@ -1,14 +1,15 @@
+import { memo } from 'react';
 import type { ScriptConfig, ScriptType } from '../types';
+import { renderWechatEmojiHTML } from '../lib/wechat-emoji';
 
 interface ScriptCardProps {
   script: ScriptConfig;
   index: number;
-  sampleName: string;
   canDelete: boolean;
-  onChange: (updated: ScriptConfig) => void;
-  onDelete: () => void;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragOver: (e: React.DragEvent) => void;
+  onChange: (index: number, updated: ScriptConfig) => void;
+  onDelete: (index: number) => void;
+  onDragStart: (index: number, e: React.DragEvent) => void;
+  onDragOver: (index: number, e: React.DragEvent) => void;
   onDragEnd: () => void;
   isDragging: boolean;
   isOver: boolean;
@@ -17,10 +18,9 @@ interface ScriptCardProps {
 const ORDINALS = ['第一', '第二', '第三', '第四', '第五'];
 const ARTICLE_SLOTS = [1, 2, 3, 4, 5, 6];
 
-export default function ScriptCard({
+function ScriptCard({
   script,
   index,
-  sampleName,
   canDelete,
   onChange,
   onDelete,
@@ -34,7 +34,7 @@ export default function ScriptCard({
     if (type === script.type) return;
     if (type === 'article') {
       const idx = script.articleIndex || 1;
-      onChange({
+      onChange(index, {
         ...script,
         type: 'article',
         text: `收藏夹文章链接${idx}`,
@@ -42,7 +42,7 @@ export default function ScriptCard({
         prependName: false,
       });
     } else {
-      onChange({ ...script, type: 'text', text: '', prependName: false });
+      onChange(index, { ...script, type: 'text', text: '', prependName: false });
     }
   };
 
@@ -51,14 +51,14 @@ export default function ScriptCard({
   return (
     <div
       className={`sc ${isDragging ? 'sc--drag' : ''} ${isOver ? 'sc--over' : ''}`}
-      onDragOver={onDragOver}
+      onDragOver={(e) => onDragOver(index, e)}
     >
       {/* Header */}
       <div className="sc-top">
         <div
           className="sc-grip"
           draggable
-          onDragStart={onDragStart}
+          onDragStart={(e) => onDragStart(index, e)}
           onDragEnd={onDragEnd}
           title="拖拽排序"
         >
@@ -82,7 +82,7 @@ export default function ScriptCard({
         </div>
 
         {canDelete && (
-          <button className="sc-del" onClick={onDelete} title="删除">
+          <button className="sc-del" onClick={() => onDelete(index)} title="删除">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M4.5 4.5l7 7m0-7l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
@@ -97,7 +97,7 @@ export default function ScriptCard({
             <input
               type="checkbox"
               checked={script.prependName}
-              onChange={(e) => onChange({ ...script, prependName: e.target.checked })}
+              onChange={(e) => onChange(index, { ...script, prependName: e.target.checked })}
             />
             <span>在前面加上客户称呼</span>
           </label>
@@ -106,7 +106,7 @@ export default function ScriptCard({
               className={`sc-textarea ${script.text.trim() === '' ? 'sc-textarea--empty' : ''}`}
               value={script.text}
               onChange={(e) => {
-                onChange({ ...script, text: e.target.value });
+                onChange(index, { ...script, text: e.target.value });
                 // Auto-resize
                 const el = e.target;
                 el.style.height = 'auto';
@@ -127,6 +127,12 @@ export default function ScriptCard({
             {script.text.trim() === '' && (
               <span className="sc-textarea-hint">必填，请输入话术内容</span>
             )}
+            {script.text.includes('[') && (
+              <div
+                className="sc-emoji-preview"
+                dangerouslySetInnerHTML={{ __html: renderWechatEmojiHTML(script.text, 22) }}
+              />
+            )}
           </div>
         </div>
       )}
@@ -141,7 +147,9 @@ export default function ScriptCard({
                 <button
                   key={n}
                   className={`sc-slot ${script.articleIndex === n ? 'sc-slot--on' : ''}`}
-                  onClick={() => onChange({ ...script, articleIndex: n, text: `收藏夹文章链接${n}` })}
+                  onClick={() =>
+                    onChange(index, { ...script, articleIndex: n, text: `收藏夹文章链接${n}` })
+                  }
                 >
                   {n}
                 </button>
@@ -155,3 +163,5 @@ export default function ScriptCard({
     </div>
   );
 }
+
+export default memo(ScriptCard);

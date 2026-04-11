@@ -1,20 +1,20 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { AppConfig, ParsedData } from '../types';
 
 interface DataCardProps {
   parsedData: ParsedData;
   fileName: string;
-  config: AppConfig;
+  columnMapping: AppConfig['columnMapping'];
   onMappingChange: (
     field: keyof AppConfig['columnMapping'],
     value: string
   ) => void;
 }
 
-export default function DataCard({
+function DataCard({
   parsedData,
   fileName,
-  config,
+  columnMapping,
   onMappingChange,
 }: DataCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -22,9 +22,9 @@ export default function DataCard({
   const { headers, rows } = parsedData;
 
   const sampleId =
-    rows.length > 0 ? rows[0][config.columnMapping.customerIdColumn] || '—' : '—';
+    rows.length > 0 ? rows[0][columnMapping.customerIdColumn] || '—' : '—';
   const sampleName =
-    rows.length > 0 ? rows[0][config.columnMapping.customerNameColumn] || '—' : '—';
+    rows.length > 0 ? rows[0][columnMapping.customerNameColumn] || '—' : '—';
 
   return (
     <div className="dc">
@@ -75,7 +75,7 @@ export default function DataCard({
 
           <div className="dc-bottom">
             <span className="dc-bottom-text">
-              共 {rows.length} 条 · 编号列：{config.columnMapping.customerIdColumn} · 名称列：{config.columnMapping.customerNameColumn}
+              共 {rows.length} 条 · 编号列：{columnMapping.customerIdColumn} · 名称列：{columnMapping.customerNameColumn}
             </span>
             <button className="link-btn link-btn--sm" onClick={() => setEditMapping(!editMapping)}>
               {editMapping ? '收起' : '修改识别'}
@@ -93,7 +93,7 @@ export default function DataCard({
                   <label className="dc-map-label">{label}</label>
                   <select
                     className="dc-map-select"
-                    value={config.columnMapping[field]}
+                    value={columnMapping[field]}
                     onChange={(e) => onMappingChange(field, e.target.value)}
                   >
                     {headers.map((h) => (
@@ -109,3 +109,5 @@ export default function DataCard({
     </div>
   );
 }
+
+export default memo(DataCard);

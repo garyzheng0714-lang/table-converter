@@ -1,13 +1,17 @@
+import { memo, useMemo } from 'react';
 import type { ScriptConfig } from '../types';
-import { renderWechatEmojiHTML } from '../lib/wechat-emoji';
+import { escapeHTML, renderWechatEmojiHTML } from '../lib/wechat-emoji';
 
 interface ChatPreviewProps {
   scripts: ScriptConfig[];
   sampleName: string;
 }
 
-export default function ChatPreview({ scripts, sampleName }: ChatPreviewProps) {
-  const active = scripts.filter((s) => s.text.trim() !== '');
+function ChatPreview({ scripts, sampleName }: ChatPreviewProps) {
+  const active = useMemo(
+    () => scripts.filter((s) => s.text.trim() !== ''),
+    [scripts]
+  );
 
   return (
     <div className="chat-preview">
@@ -55,7 +59,7 @@ export default function ChatPreview({ scripts, sampleName }: ChatPreviewProps) {
                       style={{ whiteSpace: 'pre-wrap' }}
                       dangerouslySetInnerHTML={{
                         __html: s.prependName && sampleName
-                          ? `<strong>${sampleName}</strong>，${renderWechatEmojiHTML(s.text)}`
+                          ? `<strong>${escapeHTML(sampleName)}</strong>，${renderWechatEmojiHTML(s.text)}`
                           : renderWechatEmojiHTML(s.text),
                       }}
                     />
@@ -70,3 +74,5 @@ export default function ChatPreview({ scripts, sampleName }: ChatPreviewProps) {
     </div>
   );
 }
+
+export default memo(ChatPreview);

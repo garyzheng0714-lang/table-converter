@@ -17,23 +17,17 @@ function StepIndicator({ current, onGoTo }: { current: Step; onGoTo: (s: Step) =
         const stepNum = (i + 1) as Step;
         const isActive = stepNum === current;
         const isDone = stepNum < current;
-        const clickable = isDone || isActive;
+        const clickable = isDone;
         return (
           <div
             key={stepNum}
             className={`step-item ${isActive ? 'step-active' : ''} ${isDone ? 'step-done' : ''} ${clickable ? 'step-clickable' : ''}`}
-            onClick={() => { if (isDone) onGoTo(stepNum); }}
+            onClick={() => { if (clickable) onGoTo(stepNum); }}
           >
             <div className="step-circle">
               {isDone ? (
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M4 8.5l3 3 5-6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  <path d="M4 8.5l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               ) : (
                 stepNum
@@ -87,7 +81,6 @@ export default function App() {
       setParsedData(data);
       setFileName(file.name);
       const detected = autoDetectColumns(data.headers);
-      // Extract wechat ID from filename (strip extension)
       const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
       setConfig((prev) => ({
         ...prev,
@@ -112,9 +105,19 @@ export default function App() {
     setError(null);
   }, []);
 
+  // Navigate via step indicator — preserve data when going to step 1
+  const handleGoTo = useCallback((s: Step) => {
+    if (s === 1 && parsedData) {
+      // Going back to step 1 but data exists — just go to step 2 instead
+      setStep(2);
+    } else {
+      setStep(s);
+    }
+  }, [parsedData]);
+
   return (
     <div className={`app ${step === 2 ? 'app--wide' : ''}`}>
-      <StepIndicator current={step} onGoTo={(s) => setStep(s)} />
+      <StepIndicator current={step} onGoTo={handleGoTo} />
 
       <main className="main-content">
         {step === 1 && (
@@ -144,7 +147,6 @@ export default function App() {
               parsedData={parsedData}
               config={config}
               onBack={() => setStep(2)}
-              onRestart={handleRestart}
             />
           </div>
         )}

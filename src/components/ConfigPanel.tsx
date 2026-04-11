@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AppConfig, ParsedData, ScriptConfig } from '../types';
 import { generateFileName } from '../lib/transform';
 import DataCard from './DataCard';
@@ -26,6 +26,8 @@ export default function ConfigPanel({
 }: ConfigPanelProps) {
   const { rows } = parsedData;
   const genFileName = generateFileName(config.wechatId);
+  const configRef = useRef(config);
+  configRef.current = config;
 
   const sampleName = useMemo(() => {
     if (rows.length === 0) return '张总';
@@ -34,54 +36,61 @@ export default function ConfigPanel({
 
   /* ---- Drag ---- */
   const dragIdx = useRef<number | null>(null);
+  const overIdxRef = useRef<number | null>(null);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
-  const handleDragStart = (index: number) => (e: React.DragEvent) => {
+  const handleDragStart = useCallback((index: number, e: React.DragEvent) => {
     dragIdx.current = index;
     setDraggingIdx(index);
     e.dataTransfer.effectAllowed = 'move';
-  };
-  const handleDragOver = (index: number) => (e: React.DragEvent) => {
+  }, []);
+  const handleDragOver = useCallback((index: number, e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    overIdxRef.current = index;
     setOverIdx(index);
-  };
-  const handleDragEnd = () => {
-    if (dragIdx.current !== null && overIdx !== null && dragIdx.current !== overIdx) {
-      const next = [...config.scripts];
+  }, []);
+  const handleDragEnd = useCallback(() => {
+    const dropIndex = overIdxRef.current;
+    if (dragIdx.current !== null && dropIndex !== null && dragIdx.current !== dropIndex) {
+      const next = [...configRef.current.scripts];
       const [moved] = next.splice(dragIdx.current, 1);
-      next.splice(overIdx, 0, moved);
-      onConfigChange({ ...config, scripts: next });
+      next.splice(dropIndex, 0, moved);
+      onConfigChange({ ...configRef.current, scripts: next });
     }
     dragIdx.current = null;
+    overIdxRef.current = null;
     setDraggingIdx(null);
     setOverIdx(null);
-  };
+  }, [onConfigChange]);
 
   /* ---- CRUD ---- */
-  const updateMapping = (
+  const updateMapping = useCallback((
     field: keyof AppConfig['columnMapping'],
     value: string
   ) => {
+    const current = configRef.current;
     onConfigChange({
-      ...config,
-      columnMapping: { ...config.columnMapping, [field]: value },
+      ...current,
+      columnMapping: { ...current.columnMapping, [field]: value },
     });
-  };
+  }, [onConfigChange]);
 
-  const updateScript = (index: number, updated: ScriptConfig) => {
-    const next = [...config.scripts];
+  const updateScript = useCallback((index: number, updated: ScriptConfig) => {
+    const current = configRef.current;
+    const next = [...current.scripts];
     next[index] = updated;
-    onConfigChange({ ...config, scripts: next });
-  };
+    onConfigChange({ ...current, scripts: next });
+  }, [onConfigChange]);
 
-  const addScript = () => {
-    if (config.scripts.length >= 5) return;
+  const addScript = useCallback(() => {
+    const current = configRef.current;
+    if (current.scripts.length >= 5) return;
     onConfigChange({
-      ...config,
+      ...current,
       scripts: [
-        ...config.scripts,
+        ...current.scripts,
         {
           id: String(++scriptIdCounter),
           type: 'text',
@@ -91,13 +100,15 @@ export default function ConfigPanel({
         },
       ],
     });
-  };
+  }, [onConfigChange]);
 
-  const deleteScript = (index: number) =>
+  const deleteScript = useCallback((index: number) => {
+    const current = configRef.current;
     onConfigChange({
-      ...config,
-      scripts: config.scripts.filter((_, i) => i !== index),
+      ...current,
+      scripts: current.scripts.filter((_, i) => i !== index),
     });
+  }, [onConfigChange]);
 
   /* ---- WeChat ID confirmation ---- */
   const [wechatConfirmed, setWechatConfirmed] = useState(false);
@@ -122,7 +133,7 @@ export default function ConfigPanel({
         <DataCard
           parsedData={parsedData}
           fileName={fileName}
-          config={config}
+          columnMapping={config.columnMapping}
           onMappingChange={updateMapping}
         />
 
@@ -188,12 +199,11 @@ export default function ConfigPanel({
                   key={script.id}
                   script={script}
                   index={i}
-                  sampleName={sampleName}
                   canDelete={config.scripts.length > 1}
-                  onChange={(u) => updateScript(i, u)}
-                  onDelete={() => deleteScript(i)}
-                  onDragStart={handleDragStart(i)}
-                  onDragOver={handleDragOver(i)}
+                  onChange={updateScript}
+                  onDelete={deleteScript}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
                   onDragEnd={handleDragEnd}
                   isDragging={draggingIdx === i}
                   isOver={overIdx === i && draggingIdx !== i}
