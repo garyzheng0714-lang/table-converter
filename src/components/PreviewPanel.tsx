@@ -56,7 +56,15 @@ export default function PreviewPanel({
           >
             {downloaded ? '再次下载' : '下载表格'}
           </button>
-          <span className="preview-save-hint">请保存到「待发送名单表格目录」文件夹中</span>
+          <span className="preview-save-hint">
+            请保存到 <code className="preview-save-path">D:\WechatGroupMessage v1.0.0.zip\待发送名单表格目录</code>
+            <a
+              className="preview-save-link"
+              href="https://foodtalks.feishu.cn/wiki/UWPxwbCnOif7Zlkjy7RcgbKtn3c?sheet=6ea99f&rangeId=6ea99f_GLOeI7UPVC&rangeVer=1"
+              target="_blank"
+              rel="noopener noreferrer"
+            >查看教程</a>
+          </span>
         </div>
       </div>
 

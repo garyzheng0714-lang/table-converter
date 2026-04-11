@@ -540,7 +540,17 @@ body {
 }
 .preview-meta { font-size: 13px; color: var(--c-text-3); }
 .preview-download { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.preview-save-hint { font-size: 11px; color: var(--c-text-3); }
+.preview-save-hint { font-size: 12px; color: var(--c-text-2); line-height: 1.6; text-align: right; }
+.preview-save-path {
+  background: rgba(0,0,0,.05); padding: 2px 6px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 11px;
+  color: var(--c-text); word-break: break-all;
+}
+.preview-save-link {
+  margin-left: 6px; color: var(--c-primary); text-decoration: none;
+  font-weight: 500;
+}
+.preview-save-link:hover { text-decoration: underline; }
 
 .preview-table-section {
   background: var(--c-surface); border-radius: var(--r-lg);
