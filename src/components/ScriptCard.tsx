@@ -1,5 +1,4 @@
 import type { ScriptConfig, ScriptType } from '../types';
-import { renderWechatEmoji } from '../lib/wechat-emoji';
 
 interface ScriptCardProps {
   script: ScriptConfig;
@@ -79,7 +78,7 @@ export default function ScriptCard({
           <button
             className={`sc-tab ${script.type === 'article' ? 'sc-tab--on' : ''}`}
             onClick={() => switchType('article')}
-          >发收藏文章</button>
+          >发文章卡片消息</button>
         </div>
 
         {canDelete && (
@@ -101,11 +100,6 @@ export default function ScriptCard({
               onChange={(e) => onChange({ ...script, prependName: e.target.checked })}
             />
             <span>在前面加上客户称呼</span>
-            {script.prependName && (
-              <span className="sc-check-eg">
-                效果：{sampleName}，{renderWechatEmoji(script.text) || '你输入的内容'}
-              </span>
-            )}
           </label>
           <div className="sc-textarea-wrap">
             <textarea

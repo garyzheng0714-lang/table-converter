@@ -130,10 +130,9 @@ export default function ConfigPanel({
         <div className="config-form">
           {/* WeChat ID — compact inline */}
           <div className="form-field">
-            <label className="form-label">
-              发送人的微信号
+            <label className="form-label form-label--step">
+              第一步：填写发送人的微信号
               <span className="form-required">*</span>
-              <span className="form-label-hint">由哪个微信发送</span>
             </label>
             <div className="form-row wechat-field">
               <input
@@ -182,7 +181,7 @@ export default function ConfigPanel({
 
           {/* Scripts */}
           <div className="form-field">
-            <label className="form-label">要发送的消息</label>
+            <label className="form-label form-label--step">第二步：确认需要发送的消息格式</label>
             <div className="scripts-list">
               {config.scripts.map((script, i) => (
                 <ScriptCard

@@ -10,17 +10,19 @@ type Step = 1 | 2 | 3;
 
 const STEP_LABELS = ['上传文件', '配置信息', '预览下载'] as const;
 
-function StepIndicator({ current }: { current: Step }) {
+function StepIndicator({ current, onGoTo }: { current: Step; onGoTo: (s: Step) => void }) {
   return (
     <div className="step-indicator">
       {STEP_LABELS.map((label, i) => {
         const stepNum = (i + 1) as Step;
         const isActive = stepNum === current;
         const isDone = stepNum < current;
+        const clickable = isDone || isActive;
         return (
           <div
             key={stepNum}
-            className={`step-item ${isActive ? 'step-active' : ''} ${isDone ? 'step-done' : ''}`}
+            className={`step-item ${isActive ? 'step-active' : ''} ${isDone ? 'step-done' : ''} ${clickable ? 'step-clickable' : ''}`}
+            onClick={() => { if (isDone) onGoTo(stepNum); }}
           >
             <div className="step-circle">
               {isDone ? (
@@ -112,7 +114,7 @@ export default function App() {
 
   return (
     <div className={`app ${step === 2 ? 'app--wide' : ''}`}>
-      <StepIndicator current={step} />
+      <StepIndicator current={step} onGoTo={(s) => setStep(s)} />
 
       <main className="main-content">
         {step === 1 && (

@@ -108,6 +108,8 @@ body {
   transition: background .3s var(--ease);
 }
 .step-done .step-line { background: var(--c-primary); }
+.step-clickable { cursor: pointer; }
+.step-done:hover .step-circle { box-shadow: 0 0 0 4px var(--c-primary-glow); }
 
 /* ============================================================
    Animations
@@ -208,6 +210,10 @@ body {
   font-size: 13px; font-weight: 600; color: var(--c-text-2);
   letter-spacing: -.1px;
 }
+.form-label--step {
+  font-size: 16px; font-weight: 700; color: var(--c-text);
+  font-family: var(--font-display); letter-spacing: -.3px;
+}
 .form-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .form-input {
   width: 200px; padding: 8px 12px;
@@ -232,30 +238,22 @@ body {
 .form-hint--ok { color: var(--c-success); font-weight: 500; }
 .form-input--ok { border-color: var(--c-success); }
 
-/* WeChat confirm popup */
+/* WeChat confirm popup — inline right of input */
 .wechat-field { position: relative; }
 .wechat-confirm {
-  position: absolute; top: calc(100% + 10px); left: 0;
-  background: var(--c-surface); border-radius: var(--r-lg);
-  padding: 16px 20px;
-  box-shadow: 0 4px 24px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.06);
-  z-index: 10; min-width: 280px;
-  animation: slideUp .2s var(--ease) both;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--c-primary-soft); border-radius: var(--r-md);
+  padding: 6px 12px; font-size: 13px; color: var(--c-text);
+  animation: fadeIn .2s var(--ease) both; flex-shrink: 0;
 }
-.wechat-confirm-arrow {
-  position: absolute; top: -6px; left: 24px;
-  width: 12px; height: 12px; background: var(--c-surface);
-  transform: rotate(45deg);
-  box-shadow: -1px -1px 0 rgba(0,0,0,.06);
-}
-.wechat-confirm-text { font-size: 13px; color: var(--c-text-2); margin-bottom: 8px; }
+.wechat-confirm-arrow { display: none; }
+.wechat-confirm-text { display: none; }
 .wechat-confirm-id {
-  font-size: 18px; font-weight: 700; color: var(--c-text);
-  font-family: var(--font-display); letter-spacing: -.3px;
-  padding: 8px 12px; background: var(--c-primary-soft);
-  border-radius: var(--r-md); margin-bottom: 12px; text-align: center;
+  font-weight: 700; color: var(--c-primary);
+  font-family: var(--font-display);
 }
-.wechat-confirm-actions { display: flex; align-items: center; gap: 12px; }
+.wechat-confirm-actions { display: flex; align-items: center; gap: 8px; }
+.wechat-confirm-actions .btn { padding: 4px 12px; font-size: 12px; }
 
 /* Keep section-title for PreviewPanel */
 .section-title {
