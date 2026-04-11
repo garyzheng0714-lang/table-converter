@@ -34,8 +34,8 @@ export default function PreviewPanel({
     '发送时间',
   ];
 
-  const handleDownload = () => {
-    writeExcel(transformedData, fileName);
+  const handleDownload = async () => {
+    await writeExcel(transformedData, fileName);
     setDownloaded(true);
   };
 

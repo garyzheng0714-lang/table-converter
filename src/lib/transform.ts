@@ -1,31 +1,34 @@
-import type { AppConfig } from '../types';
+import type { AppConfig } from '../types.js';
+
+const SCRIPT_KEYS = ['话术1', '话术2', '话术3', '话术4', '话术5'] as const;
 
 export function transformData(
   sourceRows: Record<string, string>[],
   config: AppConfig
 ): Record<string, string>[] {
   const { columnMapping, scripts } = config;
+  const { customerIdColumn, customerNameColumn, nameForConcatColumn } = columnMapping;
+  const scriptConfigs = SCRIPT_KEYS.map((_, index) => {
+    const script = scripts[index];
+    return {
+      text: script?.text || '',
+      prependName: !!script?.prependName,
+    };
+  });
 
   return sourceRows.map((row) => {
-    const result: Record<string, string> = {};
+    const nameValue = row[nameForConcatColumn] || '';
+    const result: Record<string, string> = {
+      客户编号: row[customerIdColumn] || '',
+      '客户名称/微信号': row[customerNameColumn] || '',
+    };
 
-    result['客户编号'] = row[columnMapping.customerIdColumn] || '';
-    result['客户名称/微信号'] = row[columnMapping.customerNameColumn] || '';
-
-    const nameValue = row[columnMapping.nameForConcatColumn] || '';
-
-    for (let i = 0; i < 5; i++) {
-      const key = `话术${i + 1}`;
-      const script = scripts[i];
-      if (script) {
-        if (script.prependName && nameValue) {
-          result[key] = nameValue + '，' + script.text;
-        } else {
-          result[key] = script.text;
-        }
-      } else {
-        result[key] = '';
-      }
+    for (let i = 0; i < SCRIPT_KEYS.length; i++) {
+      const script = scriptConfigs[i];
+      result[SCRIPT_KEYS[i]] =
+        script.prependName && nameValue
+          ? nameValue + '，' + script.text
+          : script.text;
     }
 
     result['发送状态'] = '';

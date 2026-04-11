@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "perf:build": "tsc -p scripts/tsconfig.perf.json",
+    "perf:test": "npm run perf:build && node --expose-gc scripts/perf-benchmark.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
