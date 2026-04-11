@@ -1,4 +1,5 @@
 import type { AppConfig } from '../types.js';
+import { renderWechatEmoji } from './wechat-emoji.js';
 
 const SCRIPT_KEYS = ['话术1', '话术2', '话术3', '话术4', '话术5'] as const;
 
@@ -25,10 +26,11 @@ export function transformData(
 
     for (let i = 0; i < SCRIPT_KEYS.length; i++) {
       const script = scriptConfigs[i];
+      const text = renderWechatEmoji(script.text);
       result[SCRIPT_KEYS[i]] =
         script.prependName && nameValue
-          ? nameValue + '，' + script.text
-          : script.text;
+          ? nameValue + '，' + text
+          : text;
     }
 
     result['发送状态'] = '';
