@@ -1,4 +1,5 @@
 import type { ScriptConfig } from '../types';
+import { renderWechatEmoji } from '../lib/wechat-emoji';
 
 interface ChatPreviewProps {
   scripts: ScriptConfig[];
@@ -52,10 +53,10 @@ export default function ChatPreview({ scripts, sampleName }: ChatPreviewProps) {
                     <div className="cp-bubble" style={{ whiteSpace: 'pre-wrap' }}>
                       {s.prependName && sampleName ? (
                         <>
-                          <strong>{sampleName}</strong>，{s.text}
+                          <strong>{sampleName}</strong>，{renderWechatEmoji(s.text)}
                         </>
                       ) : (
-                        s.text
+                        renderWechatEmoji(s.text)
                       )}
                     </div>
                   )}

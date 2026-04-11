@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { AppConfig, ParsedData } from '../types';
 import { transformData, generateFileName } from '../lib/transform';
 import { writeExcel } from '../lib/excel';
+import { renderWechatEmoji } from '../lib/wechat-emoji';
 
 interface PreviewPanelProps {
   parsedData: ParsedData;
@@ -98,7 +99,10 @@ export default function PreviewPanel({
                             : ''
                         }
                       >
-                        {row[col] || <span className="cell-empty">—</span>}
+                        {row[col]
+                          ? (col.startsWith('话术') ? renderWechatEmoji(row[col]) : row[col])
+                          : <span className="cell-empty">—</span>
+                        }
                       </td>
                     ))}
                   </tr>

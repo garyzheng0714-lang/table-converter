@@ -1,4 +1,5 @@
 import type { ScriptConfig, ScriptType } from '../types';
+import { renderWechatEmoji } from '../lib/wechat-emoji';
 
 interface ScriptCardProps {
   script: ScriptConfig;
@@ -102,7 +103,7 @@ export default function ScriptCard({
             <span>在前面加上客户称呼</span>
             {script.prependName && (
               <span className="sc-check-eg">
-                效果：{sampleName}，{script.text || '你输入的内容'}
+                效果：{sampleName}，{renderWechatEmoji(script.text) || '你输入的内容'}
               </span>
             )}
           </label>
