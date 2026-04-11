@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AppConfig, ParsedData, ScriptConfig } from '../types';
 import { generateFileName } from '../lib/transform';
 import DataCard from './DataCard';
@@ -99,8 +99,20 @@ export default function ConfigPanel({
       scripts: config.scripts.filter((_, i) => i !== index),
     });
 
+  /* ---- WeChat ID confirmation ---- */
+  const [wechatConfirmed, setWechatConfirmed] = useState(false);
+  const wechatInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset confirmation when wechatId changes
+  useEffect(() => {
+    setWechatConfirmed(false);
+  }, [config.wechatId]);
+
+  const showConfirmPopup = config.wechatId.trim() !== '' && !wechatConfirmed;
+
   const canProceed =
     config.wechatId.trim() !== '' &&
+    wechatConfirmed &&
     config.scripts.some((s) => s.text.trim() !== '');
 
   return (
@@ -123,9 +135,10 @@ export default function ConfigPanel({
               <span className="form-required">*</span>
               <span className="form-label-hint">由哪个微信发送</span>
             </label>
-            <div className="form-row">
+            <div className="form-row wechat-field">
               <input
-                className={`form-input ${config.wechatId.trim() === '' ? 'form-input--empty' : ''}`}
+                ref={wechatInputRef}
+                className={`form-input ${config.wechatId.trim() === '' ? 'form-input--empty' : ''} ${wechatConfirmed ? 'form-input--ok' : ''}`}
                 type="text"
                 value={config.wechatId}
                 onChange={(e) =>
@@ -133,12 +146,36 @@ export default function ConfigPanel({
                 }
                 placeholder="请填写微信号"
               />
-              {config.wechatId ? (
-                <span className="form-hint">
-                  文件名：{genFileName}
-                </span>
-              ) : (
+              {wechatConfirmed && (
+                <span className="form-hint form-hint--ok">已确认 · 文件名：{genFileName}</span>
+              )}
+              {!wechatConfirmed && config.wechatId.trim() === '' && (
                 <span className="form-hint form-hint--warn">必填，用于生成文件名</span>
+              )}
+
+              {/* Confirmation popup */}
+              {showConfirmPopup && (
+                <div className="wechat-confirm">
+                  <div className="wechat-confirm-arrow" />
+                  <p className="wechat-confirm-text">
+                    已从文件名自动提取，请确认微信号是否正确：
+                  </p>
+                  <p className="wechat-confirm-id">{config.wechatId}</p>
+                  <div className="wechat-confirm-actions">
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => setWechatConfirmed(true)}
+                    >
+                      确认正确
+                    </button>
+                    <button
+                      className="link-btn"
+                      onClick={() => wechatInputRef.current?.focus()}
+                    >
+                      修改
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>

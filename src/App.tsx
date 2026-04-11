@@ -85,8 +85,11 @@ export default function App() {
       setParsedData(data);
       setFileName(file.name);
       const detected = autoDetectColumns(data.headers);
+      // Extract wechat ID from filename (strip extension)
+      const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
       setConfig((prev) => ({
         ...prev,
+        wechatId: nameWithoutExt,
         columnMapping: detected,
       }));
       setStep(2);
