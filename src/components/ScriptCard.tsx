@@ -106,17 +106,22 @@ export default function ScriptCard({
               </span>
             )}
           </label>
-          <textarea
-            className="sc-textarea"
-            value={script.text}
-            onChange={(e) => onChange({ ...script, text: e.target.value })}
-            placeholder={
-              script.prependName
-                ? '输入要发的内容，称呼和逗号会自动加在前面'
-                : '输入要发送的文字内容'
-            }
-            rows={2}
-          />
+          <div className="sc-textarea-wrap">
+            <textarea
+              className={`sc-textarea ${script.text.trim() === '' ? 'sc-textarea--empty' : ''}`}
+              value={script.text}
+              onChange={(e) => onChange({ ...script, text: e.target.value })}
+              placeholder={
+                script.prependName
+                  ? '输入要发的内容，称呼和逗号会自动加在前面'
+                  : '输入要发送的文字内容'
+              }
+              rows={2}
+            />
+            {script.text.trim() === '' && (
+              <span className="sc-textarea-hint">必填，请输入话术内容</span>
+            )}
+          </div>
         </div>
       )}
 

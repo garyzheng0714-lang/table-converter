@@ -118,21 +118,27 @@ export default function ConfigPanel({
         <div className="config-form">
           {/* WeChat ID — compact inline */}
           <div className="form-field">
-            <label className="form-label">你的微信号</label>
+            <label className="form-label">
+              发送人的微信号
+              <span className="form-required">*</span>
+              <span className="form-label-hint">由哪个微信发送</span>
+            </label>
             <div className="form-row">
               <input
-                className="form-input"
+                className={`form-input ${config.wechatId.trim() === '' ? 'form-input--empty' : ''}`}
                 type="text"
                 value={config.wechatId}
                 onChange={(e) =>
                   onConfigChange({ ...config, wechatId: e.target.value })
                 }
-                placeholder="用于生成文件名，方便辨认"
+                placeholder="请填写微信号"
               />
-              {config.wechatId && (
+              {config.wechatId ? (
                 <span className="form-hint">
                   文件名：{genFileName}
                 </span>
+              ) : (
+                <span className="form-hint form-hint--warn">必填，用于生成文件名</span>
               )}
             </div>
           </div>

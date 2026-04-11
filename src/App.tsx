@@ -53,7 +53,10 @@ const initialConfig: AppConfig = {
     customerNameColumn: '',
     nameForConcatColumn: '',
   },
-  scripts: [{ id: '1', type: 'text', text: '', articleIndex: 1, prependName: false }],
+  scripts: [
+    { id: '1', type: 'article', text: '收藏夹文章链接1', articleIndex: 1, prependName: false },
+    { id: '2', type: 'text', text: '', articleIndex: 1, prependName: true },
+  ],
 };
 
 export default function App() {
