@@ -78,6 +78,6 @@ export function autoDetectColumns(headers: string[]): {
       '备注名称',
       '昵称',
     ]),
-    nameForConcatColumn: findColumn(['称呼订正', '昵称', '备注名称', '名称']),
+    nameForConcatColumn: findColumn(['称呼订正']),
   };
 }
