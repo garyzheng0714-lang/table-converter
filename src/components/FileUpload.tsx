@@ -19,8 +19,8 @@ export default function FileUpload({
     (file: File) => {
       setFormatError(null);
       const ext = file.name.split('.').pop()?.toLowerCase();
-      if (ext !== 'xlsx' && ext !== 'xls') {
-        setFormatError('不支持该格式，请选择 .xlsx 或 .xls 文件');
+      if (ext !== 'xlsx' && ext !== 'xls' && ext !== 'csv') {
+        setFormatError('不支持该格式，请选择 .xlsx、.xls 或 .csv 文件');
         return;
       }
       onFileSelected(file);
@@ -57,7 +57,7 @@ export default function FileUpload({
         <input
           ref={inputRef}
           type="file"
-          accept=".xlsx,.xls"
+          accept=".xlsx,.xls,.csv"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
           style={{ display: 'none' }}
         />
@@ -83,7 +83,7 @@ export default function FileUpload({
             <p className="dz-text">
               {isDragging ? '松开鼠标，开始读取' : '点击选择文件，或拖拽到此处'}
             </p>
-            <p className="dz-hint">支持 .xlsx / .xls 格式的 Excel 文件</p>
+            <p className="dz-hint">支持 .xlsx、.xls、.csv 格式</p>
           </div>
         )}
       </div>

@@ -29,7 +29,7 @@ export function parseExcelBuffer(input: ArrayBuffer | Uint8Array): ParsedData {
     const workbook = XLSX.read(data, { type: 'array', dense: true });
     return parseWorkbook(workbook);
   } catch {
-    throw new Error('无法读取此文件，请确认是有效的 Excel 文件');
+    throw new Error('无法读取此文件，请确认是有效的 Excel 或 CSV 文件');
   }
 }
 
