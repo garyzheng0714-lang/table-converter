@@ -539,6 +539,8 @@ body {
   letter-spacing: -.3px;
 }
 .preview-meta { font-size: 13px; color: var(--c-text-3); }
+.preview-download { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.preview-save-hint { font-size: 11px; color: var(--c-text-3); }
 
 .preview-table-section {
   background: var(--c-surface); border-radius: var(--r-lg);

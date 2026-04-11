@@ -49,12 +49,15 @@ export default function PreviewPanel({
             {transformedData.length} 条数据 · {config.scripts.length} 条话术
           </span>
         </div>
-        <button
-          className={`btn btn-primary btn-lg ${downloaded ? 'btn-downloaded' : ''}`}
-          onClick={handleDownload}
-        >
-          {downloaded ? '再次下载' : '下载表格'}
-        </button>
+        <div className="preview-download">
+          <button
+            className={`btn btn-primary btn-lg ${downloaded ? 'btn-downloaded' : ''}`}
+            onClick={handleDownload}
+          >
+            {downloaded ? '再次下载' : '下载表格'}
+          </button>
+          <span className="preview-save-hint">请保存到「待发送名单表格目录」文件夹中</span>
+        </div>
       </div>
 
       {downloaded && (
