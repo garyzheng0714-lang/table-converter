@@ -35,8 +35,8 @@ export default function PreviewPanel({
   ];
 
   const handleDownload = async () => {
-    await writeExcel(transformedData, fileName);
-    setDownloaded(true);
+    const saved = await writeExcel(transformedData, fileName);
+    if (saved) setDownloaded(true);
   };
 
   return (

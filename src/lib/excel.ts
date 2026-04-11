@@ -125,7 +125,7 @@ export async function writeExcel(
   data: Record<string, string>[],
   fileName: string,
   options: WriteExcelOptions = {}
-): Promise<void> {
+): Promise<boolean> {
   // Must call showSaveFilePicker IMMEDIATELY on user click,
   // before any heavy computation, or the browser revokes the gesture.
   if ('showSaveFilePicker' in window) {
@@ -143,9 +143,9 @@ export async function writeExcel(
       const writable = await handle.createWritable();
       await writable.write(buffer);
       await writable.close();
-      return;
+      return true;
     } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
+      if (err instanceof DOMException && err.name === 'AbortError') return false;
       // API failed for other reason — fall through to regular download
     }
   }
@@ -153,4 +153,5 @@ export async function writeExcel(
   // Fallback: standard browser download (Safari/Firefox)
   const wb = buildWorkbook(data, options);
   XLSX.writeFile(wb, fileName);
+  return true;
 }
