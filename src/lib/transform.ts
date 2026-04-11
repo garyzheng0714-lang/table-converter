@@ -72,6 +72,14 @@ export function autoDetectColumns(headers: string[]): {
     return headers[0] || '';
   };
 
+  const findColumnOrEmpty = (keywords: string[]): string => {
+    for (const kw of keywords) {
+      const match = normalized.find((n) => n.clean.includes(kw));
+      if (match) return match.original;
+    }
+    return '';
+  };
+
   return {
     customerIdColumn: findColumn(['客户编号', '编号']),
     customerNameColumn: findColumn([
@@ -80,6 +88,6 @@ export function autoDetectColumns(headers: string[]): {
       '备注名称',
       '昵称',
     ]),
-    nameForConcatColumn: findColumn(['称呼订正']),
+    nameForConcatColumn: findColumnOrEmpty(['称呼订正']),
   };
 }

@@ -238,8 +238,6 @@ body {
   padding: 6px 12px; font-size: 13px; color: var(--c-text);
   animation: fadeIn .2s var(--ease) both; flex-shrink: 0;
 }
-.wechat-confirm-arrow { display: none; }
-.wechat-confirm-text { display: none; }
 .wechat-confirm-id {
   font-weight: 700; color: var(--c-primary);
   font-family: var(--font-display);

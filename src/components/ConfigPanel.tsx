@@ -14,7 +14,7 @@ interface ConfigPanelProps {
   onNext: () => void;
 }
 
-let scriptIdCounter = 10;
+// No module-level mutable counter — use crypto.randomUUID
 
 export default function ConfigPanel({
   parsedData,
@@ -92,7 +92,7 @@ export default function ConfigPanel({
       scripts: [
         ...current.scripts,
         {
-          id: String(++scriptIdCounter),
+          id: crypto.randomUUID(),
           type: 'text',
           text: '',
           articleIndex: 1,
@@ -169,11 +169,7 @@ export default function ConfigPanel({
               {/* Confirmation popup */}
               {showConfirmPopup && (
                 <div className="wechat-confirm">
-                  <div className="wechat-confirm-arrow" />
-                  <p className="wechat-confirm-text">
-                    已从文件名自动提取，请确认微信号是否正确：
-                  </p>
-                  <p className="wechat-confirm-id">{config.wechatId}</p>
+                  <span className="wechat-confirm-id">{config.wechatId}</span>
                   <div className="wechat-confirm-actions">
                     <button
                       className="btn btn-primary"
