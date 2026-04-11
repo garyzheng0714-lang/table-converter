@@ -138,7 +138,7 @@ export default function ScriptCard({
             </div>
             <span className="sc-article-label">篇文章</span>
           </div>
-          <p className="sc-note">需先把文章保存到微信收藏夹</p>
+          <p className="sc-note">如需给客户发送文章卡片，需先把文章保存到微信收藏夹</p>
         </div>
       )}
     </div>
