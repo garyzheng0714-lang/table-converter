@@ -36,9 +36,13 @@ export default function PreviewPanel({
     [config.scripts]
   );
 
-  const handleConfirmDownload = useCallback(async () => {
-    setShowDownloadDialog(false);
-    await writeExcel(transformedData, fileName);
+  const handleConfirmDownload = useCallback(() => {
+    try {
+      writeExcel(transformedData, fileName);
+      setShowDownloadDialog(false);
+    } catch {
+      alert('下载失败，请重试');
+    }
   }, [fileName, transformedData]);
 
   return (

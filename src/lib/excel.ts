@@ -121,37 +121,22 @@ export function writeExcelToArrayBuffer(
   return XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
 }
 
-export async function writeExcel(
+export function writeExcel(
   data: Record<string, string>[],
   fileName: string,
   options: WriteExcelOptions = {}
-): Promise<boolean> {
-  // Must call showSaveFilePicker IMMEDIATELY on user click,
-  // before any heavy computation, or the browser revokes the gesture.
-  if ('showSaveFilePicker' in window) {
-    try {
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{
-          description: 'Excel 文件',
-          accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
-        }],
-      });
-      // User picked a location — now build the data
-      const wb = buildWorkbook(data, options);
-      const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
-      const writable = await handle.createWritable();
-      await writable.write(buffer);
-      await writable.close();
-      return true;
-    } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === 'AbortError') return false;
-      // API failed for other reason — fall through to regular download
-    }
-  }
-
-  // Fallback: standard browser download (Safari/Firefox)
+): void {
   const wb = buildWorkbook(data, options);
-  XLSX.writeFile(wb, fileName);
-  return true;
+  const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
