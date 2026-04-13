@@ -23,6 +23,11 @@ export default function FileUpload({
         setFormatError('不支持该格式，请选择 .xlsx、.xls 或 .csv 文件');
         return;
       }
+      const MAX_SIZE = 10 * 1024 * 1024 * 1024; // 10 GB
+      if (file.size > MAX_SIZE) {
+        setFormatError('文件过大（超过 10 GB），请检查是否选对了文件');
+        return;
+      }
       onFileSelected(file);
     },
     [onFileSelected]

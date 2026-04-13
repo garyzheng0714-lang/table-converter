@@ -189,6 +189,37 @@ export async function downloadExcel(
   return true;
 }
 
+/**
+ * Download a pre-built Blob with native save-as picker when available.
+ */
+export async function downloadBlob(
+  blob: Blob,
+  fileName: string,
+): Promise<boolean> {
+  const picker = window.showSaveFilePicker;
+  if (picker) {
+    try {
+      const handle = await picker({
+        suggestedName: fileName,
+        types: [{
+          description: 'Excel 文件',
+          accept: { [XLSX_MIME]: ['.xlsx'] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return false;
+      }
+    }
+  }
+  fallbackDownload(blob, fileName);
+  return true;
+}
+
 /** Legacy sync download (kept for backwards compatibility) */
 export function writeExcel(
   data: Record<string, string>[],

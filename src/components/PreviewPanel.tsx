@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { AppConfig, ExportTemplate, ParsedData, QixinConfig } from '../types';
 import {
   transformData,
@@ -7,8 +7,10 @@ import {
   generateQixinFileName,
   generateQixinSheetName,
 } from '../lib/transform';
-import { downloadExcel } from '../lib/excel';
+import { downloadBlob, downloadExcel } from '../lib/excel';
 import { renderWechatEmojiHTML } from '../lib/wechat-emoji';
+
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 interface PreviewPanelProps {
   parsedData: ParsedData;
@@ -25,25 +27,23 @@ export default function PreviewPanel({
   qixinConfig,
   onBack,
 }: PreviewPanelProps) {
+  const [downloading, setDownloading] = useState(false);
   const isQixin = exportTemplate === 'qixin';
+  const totalCount = parsedData.rows.length;
 
-  const transformedData = useMemo(() => {
-    if (isQixin) {
-      return transformDataForQixin(parsedData.rows, qixinConfig);
-    }
-    return transformData(parsedData.rows, config);
+  // #8: Only transform first 10 rows for preview — not all data
+  const previewData = useMemo(() => {
+    const sample = parsedData.rows.slice(0, 10);
+    if (isQixin) return transformDataForQixin(sample, qixinConfig);
+    return transformData(sample, config);
   }, [parsedData.rows, isQixin, config, qixinConfig]);
 
   const fileName = isQixin
     ? generateQixinFileName(qixinConfig.wechatNickname, qixinConfig.wechatId)
     : generateFileName(config.wechatId);
 
-  const previewRows = useMemo(() => transformedData.slice(0, 10), [transformedData]);
-
   const displayColumns = useMemo(() => {
-    if (isQixin) {
-      return Object.keys(transformedData[0] || {});
-    }
+    if (isQixin) return Object.keys(previewData[0] || {});
     return [
       '客户编号',
       '客户名称/微信号',
@@ -51,22 +51,60 @@ export default function PreviewPanel({
       '发送状态',
       '发送时间',
     ];
-  }, [isQixin, config.scripts, transformedData]);
+  }, [isQixin, config.scripts, previewData]);
 
   const metaText = isQixin
-    ? `${transformedData.length} 条数据 · 企信RPA格式`
-    : `${transformedData.length} 条数据 · ${config.scripts.length} 条话术`;
+    ? `${totalCount} 条数据 · 企信RPA格式`
+    : `${totalCount} 条数据 · ${config.scripts.length} 条话术`;
 
+  // #7: Download — try Web Worker to keep UI responsive, fallback to main thread
   const handleDownload = useCallback(async () => {
+    setDownloading(true);
+    const sheetName = isQixin
+      ? generateQixinSheetName(qixinConfig.wechatNickname)
+      : undefined;
+
     try {
-      const sheetName = isQixin
-        ? generateQixinSheetName(qixinConfig.wechatNickname)
-        : undefined;
-      await downloadExcel(transformedData, fileName, { sheetName });
+      // Try worker path (module workers supported in modern Chrome/Edge/Firefox)
+      const worker = new Worker(
+        new URL('../lib/export.worker.ts', import.meta.url),
+        { type: 'module' },
+      );
+
+      const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+        worker.onmessage = (e: MessageEvent<ArrayBuffer>) => {
+          resolve(e.data);
+          worker.terminate();
+        };
+        worker.onerror = (err) => {
+          reject(err);
+          worker.terminate();
+        };
+        worker.postMessage({
+          rows: parsedData.rows,
+          isQixin,
+          config: isQixin ? undefined : config,
+          qixinConfig: isQixin ? qixinConfig : undefined,
+          sheetName,
+        });
+      });
+
+      const blob = new Blob([buffer], { type: XLSX_MIME });
+      await downloadBlob(blob, fileName);
     } catch {
-      alert('下载失败，请重试');
+      // Fallback: worker unavailable (Safari <15, WebView, etc.) — run on main thread
+      try {
+        const allData = isQixin
+          ? transformDataForQixin(parsedData.rows, qixinConfig)
+          : transformData(parsedData.rows, config);
+        await downloadExcel(allData, fileName, { sheetName });
+      } catch {
+        alert('下载失败，请重试');
+      }
+    } finally {
+      setDownloading(false);
     }
-  }, [fileName, transformedData, isQixin, qixinConfig.wechatNickname]);
+  }, [parsedData.rows, isQixin, config, qixinConfig, fileName]);
 
   return (
     <div className="preview-page">
@@ -77,15 +115,16 @@ export default function PreviewPanel({
         </div>
         <button
           className="btn btn-primary btn-lg"
+          disabled={downloading}
           onClick={handleDownload}
         >
-          下载表格
+          {downloading ? '正在生成...' : '下载表格'}
         </button>
       </div>
 
       <section className="preview-table-section">
         <p className="preview-scroll-hint">按住 Shift + 鼠标滚轮 可左右滑动查看完整列</p>
-        {previewRows.length > 0 ? (
+        {previewData.length > 0 ? (
           <div className="table-scroll table-scroll--visible">
             <table className="preview-table">
               <thead>
@@ -96,7 +135,7 @@ export default function PreviewPanel({
                 </tr>
               </thead>
               <tbody>
-                {previewRows.map((row, i) => (
+                {previewData.map((row, i) => (
                   <tr key={i}>
                     {displayColumns.map((col) => (
                       <td
@@ -123,9 +162,9 @@ export default function PreviewPanel({
             <p>原始表格中没有数据行</p>
           </div>
         )}
-        {transformedData.length > 10 && (
+        {totalCount > 10 && (
           <p className="preview-count">
-            显示前 10 条，共 {transformedData.length} 条
+            显示前 10 条，共 {totalCount} 条
           </p>
         )}
       </section>
