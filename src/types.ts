@@ -1,4 +1,5 @@
 export type ScriptType = 'text' | 'article';
+export type ExportTemplate = 'yingdao' | 'qixin';
 
 export interface ScriptConfig {
   id: string;
@@ -16,10 +17,25 @@ export interface ColumnMapping {
   nameForConcatColumn: string;
 }
 
+export interface QixinColumnMapping {
+  nicknameColumn: string;
+  wechatIdColumn: string;
+  remarkColumn: string;
+  tagColumn: string;
+  greetingColumn: string;
+}
+
 export interface AppConfig {
   wechatId: string;
   columnMapping: ColumnMapping;
   scripts: ScriptConfig[];
+}
+
+export interface QixinConfig {
+  wechatNickname: string;
+  wechatId: string;
+  contactType: string;
+  columnMapping: QixinColumnMapping;
 }
 
 export interface ParsedData {

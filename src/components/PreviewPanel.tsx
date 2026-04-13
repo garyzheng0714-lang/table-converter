@@ -1,104 +1,92 @@
-import { useCallback, useMemo, useState } from 'react';
-import type { AppConfig, ParsedData } from '../types';
-import { transformData, generateFileName } from '../lib/transform';
-import { writeExcel } from '../lib/excel';
+import { useCallback, useMemo } from 'react';
+import type { AppConfig, ExportTemplate, ParsedData, QixinConfig } from '../types';
+import {
+  transformData,
+  generateFileName,
+  transformDataForQixin,
+  generateQixinFileName,
+  generateQixinSheetName,
+} from '../lib/transform';
+import { downloadExcel } from '../lib/excel';
 import { renderWechatEmojiHTML } from '../lib/wechat-emoji';
 
 interface PreviewPanelProps {
   parsedData: ParsedData;
+  exportTemplate: ExportTemplate;
   config: AppConfig;
+  qixinConfig: QixinConfig;
   onBack: () => void;
 }
 
 export default function PreviewPanel({
   parsedData,
+  exportTemplate,
   config,
+  qixinConfig,
   onBack,
 }: PreviewPanelProps) {
-  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+  const isQixin = exportTemplate === 'qixin';
 
-  const transformedData = useMemo(
-    () => transformData(parsedData.rows, config),
-    [parsedData.rows, config]
-  );
+  const transformedData = useMemo(() => {
+    if (isQixin) {
+      return transformDataForQixin(parsedData.rows, qixinConfig);
+    }
+    return transformData(parsedData.rows, config);
+  }, [parsedData.rows, isQixin, config, qixinConfig]);
 
-  const fileName = generateFileName(config.wechatId);
+  const fileName = isQixin
+    ? generateQixinFileName(qixinConfig.wechatNickname, qixinConfig.wechatId)
+    : generateFileName(config.wechatId);
+
   const previewRows = useMemo(() => transformedData.slice(0, 10), [transformedData]);
 
-  const displayColumns = useMemo(
-    () => [
+  const displayColumns = useMemo(() => {
+    if (isQixin) {
+      return Object.keys(transformedData[0] || {});
+    }
+    return [
       '客户编号',
       '客户名称/微信号',
       ...config.scripts.map((_, i) => `话术${i + 1}`),
       '发送状态',
       '发送时间',
-    ],
-    [config.scripts]
-  );
+    ];
+  }, [isQixin, config.scripts, transformedData]);
 
-  const handleConfirmDownload = useCallback(() => {
+  const metaText = isQixin
+    ? `${transformedData.length} 条数据 · 企信RPA格式`
+    : `${transformedData.length} 条数据 · ${config.scripts.length} 条话术`;
+
+  const handleDownload = useCallback(async () => {
     try {
-      writeExcel(transformedData, fileName);
-      setShowDownloadDialog(false);
+      const sheetName = isQixin
+        ? generateQixinSheetName(qixinConfig.wechatNickname)
+        : undefined;
+      await downloadExcel(transformedData, fileName, { sheetName });
     } catch {
       alert('下载失败，请重试');
     }
-  }, [fileName, transformedData]);
+  }, [fileName, transformedData, isQixin, qixinConfig.wechatNickname]);
 
   return (
     <div className="preview-page">
       <div className="preview-header">
         <div className="preview-header-info">
           <h2 className="preview-title">预览：{fileName}</h2>
-          <span className="preview-meta">
-            {transformedData.length} 条数据 · {config.scripts.length} 条话术
-          </span>
+          <span className="preview-meta">{metaText}</span>
         </div>
         <button
           className="btn btn-primary btn-lg"
-          onClick={() => setShowDownloadDialog(true)}
+          onClick={handleDownload}
         >
           下载表格
         </button>
       </div>
 
-      {/* Download confirmation dialog */}
-      {showDownloadDialog && (
-        <div className="dl-overlay" onClick={() => setShowDownloadDialog(false)}>
-          <div className="dl-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3 className="dl-dialog-title">下载文件</h3>
-            <p className="dl-dialog-text">请将文件保存到以下路径：</p>
-            <code className="dl-dialog-path">
-              D:\WechatGroupMessage v1.0.0.zip\待发送名单表格目录
-            </code>
-            <p className="dl-dialog-text">
-              文件名：<strong>{fileName}</strong>
-            </p>
-            <div className="dl-dialog-actions">
-              <a
-                className="link-btn"
-                href="https://foodtalks.feishu.cn/wiki/UWPxwbCnOif7Zlkjy7RcgbKtn3c?sheet=6ea99f&rangeId=6ea99f_GLOeI7UPVC&rangeVer=1"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                查看教程
-              </a>
-              <div className="dl-dialog-btns">
-                <button className="link-btn" onClick={() => setShowDownloadDialog(false)}>
-                  取消
-                </button>
-                <button className="btn btn-primary" onClick={handleConfirmDownload}>
-                  确认下载
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <section className="preview-table-section">
+        <p className="preview-scroll-hint">按住 Shift + 鼠标滚轮 可左右滑动查看完整列</p>
         {previewRows.length > 0 ? (
-          <div className="table-scroll">
+          <div className="table-scroll table-scroll--visible">
             <table className="preview-table">
               <thead>
                 <tr>

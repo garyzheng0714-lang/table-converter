@@ -1,6 +1,15 @@
 import * as XLSX from 'xlsx';
 import type { ParsedData } from '../types.js';
 
+declare global {
+  interface Window {
+    showSaveFilePicker?: (options?: {
+      suggestedName?: string;
+      types?: { description: string; accept: Record<string, string[]> }[];
+    }) => Promise<FileSystemFileHandle>;
+  }
+}
+
 const MIN_COL_WIDTH = 10;
 const MAX_COL_WIDTH = 40;
 const HEADER_WIDTH_FACTOR = 2;
@@ -10,6 +19,7 @@ const DEFAULT_WIDTH_SAMPLE_SIZE = 5000;
 export interface WriteExcelOptions {
   autoColumnWidth?: boolean;
   columnWidthSampleSize?: number;
+  sheetName?: string;
 }
 
 function parseWorkbook(workbook: XLSX.WorkBook): ParsedData {
@@ -109,7 +119,7 @@ function buildWorkbook(
   }
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.utils.book_append_sheet(wb, ws, options.sheetName || 'Sheet1');
   return wb;
 }
 
@@ -121,16 +131,15 @@ export function writeExcelToArrayBuffer(
   return XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
 }
 
-export function writeExcel(
-  data: Record<string, string>[],
-  fileName: string,
-  options: WriteExcelOptions = {}
-): void {
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+function buildBlob(data: Record<string, string>[], options: WriteExcelOptions): Blob {
   const wb = buildWorkbook(data, options);
   const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
+  return new Blob([buffer], { type: XLSX_MIME });
+}
+
+function fallbackDownload(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -139,4 +148,52 @@ export function writeExcel(
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Download Excel with native save-as picker when available.
+ * Returns true if file was saved, false if user cancelled.
+ */
+export async function downloadExcel(
+  data: Record<string, string>[],
+  fileName: string,
+  options: WriteExcelOptions = {}
+): Promise<boolean> {
+  const blob = buildBlob(data, options);
+
+  // Try native File System Access API (Chrome/Edge)
+  const picker = window.showSaveFilePicker;
+  if (picker) {
+    try {
+      const handle = await picker({
+        suggestedName: fileName,
+        types: [{
+          description: 'Excel 文件',
+          accept: { [XLSX_MIME]: ['.xlsx'] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (err: unknown) {
+      // User cancelled the picker
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return false;
+      }
+      // Other error — fall through to legacy download
+    }
+  }
+
+  fallbackDownload(blob, fileName);
+  return true;
+}
+
+/** Legacy sync download (kept for backwards compatibility) */
+export function writeExcel(
+  data: Record<string, string>[],
+  fileName: string,
+  options: WriteExcelOptions = {}
+): void {
+  fallbackDownload(buildBlob(data, options), fileName);
 }
