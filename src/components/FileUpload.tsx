@@ -105,7 +105,7 @@ export default function FileUpload({
       )}
 
       <p className="upload-footnote">所有数据仅在您的电脑本地处理，不会上传</p>
-      <p className="upload-version">v1.1.4 · 更新于 2026-04-14</p>
+      <p className="upload-version">v1.1.5 · 更新于 2026-04-14</p>
     </div>
   );
 }
