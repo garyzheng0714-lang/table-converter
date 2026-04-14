@@ -11,12 +11,14 @@
     "perf:test": "npm run perf:build && node --expose-gc scripts/perf-benchmark.mjs"
   },
   "dependencies": {
+    "jszip": "^3.10.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "wechat-emojis": "^1.0.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/jszip": "^3.4.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

@@ -9,6 +9,7 @@ import {
 } from '../lib/transform';
 import { downloadBlob, downloadExcel, writeExcelToArrayBuffer, fallbackDownload } from '../lib/excel';
 import { renderWechatEmojiHTML } from '../lib/wechat-emoji';
+import JSZip from 'jszip';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const DEFAULT_ROWS_PER_FILE = 1000;
@@ -78,6 +79,7 @@ export default function PreviewPanel({
     try {
       if (actualSplit) {
         const baseName = fileName.replace('.xlsx', '');
+        const zip = new JSZip();
 
         for (let i = 0; i < chunkCount; i++) {
           setDownloadProgress(`${i + 1}/${chunkCount}`);
@@ -89,13 +91,12 @@ export default function PreviewPanel({
             : transformData(chunk, config);
 
           const buffer = writeExcelToArrayBuffer(chunkData, { sheetName });
-          const blob = new Blob([buffer], { type: XLSX_MIME });
-          fallbackDownload(blob, `${baseName}_${i + 1}.xlsx`);
-
-          if (i < chunkCount - 1) {
-            await new Promise(r => setTimeout(r, 300));
-          }
+          zip.file(`${baseName}_${i + 1}.xlsx`, buffer);
         }
+
+        setDownloadProgress('打包中...');
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        fallbackDownload(zipBlob, `${baseName}.zip`);
       } else {
         // Single file — use worker for large datasets
         try {
