@@ -1,6 +1,17 @@
 import type { AppConfig, QixinConfig, QixinColumnMapping } from '../types.js';
 import { wechatToUnicode } from './wechat-emoji-unicode.js';
 
+/**
+ * 清除 XML 1.0 非法控制字符（0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F）。
+ * xlsx 内部是 XML，含有这些字符会导致 Excel 报"文件已损坏"。
+ * 保留合法的 0x09(TAB)、0x0A(LF)、0x0D(CR)。
+ */
+// eslint-disable-next-line no-control-regex
+const INVALID_XML_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
+function sanitize(value: string): string {
+  return value.replace(INVALID_XML_CHARS, '');
+}
+
 const SCRIPT_KEYS = ['话术1', '话术2', '话术3', '话术4', '话术5'] as const;
 
 export function transformData(
@@ -18,10 +29,10 @@ export function transformData(
   });
 
   return sourceRows.map((row) => {
-    const nameValue = row[nameForConcatColumn] || '';
+    const nameValue = sanitize(row[nameForConcatColumn] || '');
     const result: Record<string, string> = {
-      客户编号: row[customerIdColumn] || '',
-      '客户名称/微信号': row[customerNameColumn] || '',
+      客户编号: sanitize(row[customerIdColumn] || ''),
+      '客户名称/微信号': sanitize(row[customerNameColumn] || ''),
     };
 
     for (let i = 0; i < SCRIPT_KEYS.length; i++) {
@@ -67,14 +78,14 @@ export function transformDataForQixin(
     const result: Record<string, string> = {};
     for (const h of QIXIN_HEADERS) result[h] = '';
 
-    result['所属微信昵称'] = wechatNickname;
-    result['所属微信号'] = wechatId;
-    result['类型'] = contactType;
-    result['名称'] = row[nicknameColumn] || '';
-    result['微信号'] = row[wechatIdColumn] || '';
-    result['备注'] = row[remarkColumn] || '';
+    result['所属微信昵称'] = sanitize(wechatNickname);
+    result['所属微信号'] = sanitize(wechatId);
+    result['类型'] = sanitize(contactType);
+    result['名称'] = sanitize(row[nicknameColumn] || '');
+    result['微信号'] = sanitize(row[wechatIdColumn] || '');
+    result['备注'] = sanitize(row[remarkColumn] || '');
     result['标签'] = tagValue;
-    result['打招呼自定义备注1'] = row[greetingColumn] || '';
+    result['打招呼自定义备注1'] = sanitize(row[greetingColumn] || '');
 
     return result;
   });
@@ -134,6 +145,76 @@ export function autoDetectColumns(headers: string[]): {
     ]),
     nameForConcatColumn: findColumnOrEmpty(['称呼订正']),
   };
+}
+
+/* ---- Filter / VLOOKUP matching ---- */
+
+export interface FilterResult {
+  matchedRows: Record<string, string>[];
+  masterTotal: number;
+  sentTotal: number;
+  sentUniqueKeys: number;
+  matchedCount: number;
+  unmatchedSentKeys: number;
+  masterDuplicateKeys: number;
+}
+
+export function filterByMatch(
+  masterRows: Record<string, string>[],
+  sentRows: Record<string, string>[],
+  masterKeyColumn: string,
+  sentKeyColumn: string,
+): FilterResult {
+  const sentKeys = new Set<string>();
+  for (const row of sentRows) {
+    const key = (row[sentKeyColumn] || '').trim();
+    if (key) sentKeys.add(key);
+  }
+
+  const masterKeySeen = new Map<string, number>();
+  const matchedRows: Record<string, string>[] = [];
+
+  for (const row of masterRows) {
+    const key = (row[masterKeyColumn] || '').trim();
+    masterKeySeen.set(key, (masterKeySeen.get(key) || 0) + 1);
+    if (key && sentKeys.has(key)) {
+      matchedRows.push(row);
+    }
+  }
+
+  let masterDuplicateKeys = 0;
+  for (const count of masterKeySeen.values()) {
+    if (count > 1) masterDuplicateKeys++;
+  }
+
+  const masterKeySet = new Set(masterKeySeen.keys());
+  let unmatchedSentKeys = 0;
+  for (const key of sentKeys) {
+    if (!masterKeySet.has(key)) unmatchedSentKeys++;
+  }
+
+  return {
+    matchedRows,
+    masterTotal: masterRows.length,
+    sentTotal: sentRows.length,
+    sentUniqueKeys: sentKeys.size,
+    matchedCount: matchedRows.length,
+    unmatchedSentKeys,
+    masterDuplicateKeys,
+  };
+}
+
+export function autoDetectKeyColumn(headers: string[]): string {
+  const normalized = headers.map((h) => ({
+    original: h,
+    clean: normalizeColumnName(h),
+  }));
+  const keywords = ['微信号', 'wechat', 'wxid'];
+  for (const kw of keywords) {
+    const match = normalized.find((n) => n.clean.toLowerCase().includes(kw.toLowerCase()));
+    if (match) return match.original;
+  }
+  return headers[0] || '';
 }
 
 /** Auto-detect Qixin column mappings from source headers */
