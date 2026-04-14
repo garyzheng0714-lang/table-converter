@@ -8,7 +8,7 @@ import { wechatToUnicode } from './wechat-emoji-unicode.js';
  */
 // eslint-disable-next-line no-control-regex
 const INVALID_XML_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
-function sanitize(value: string): string {
+export function sanitize(value: string): string {
   return value.replace(INVALID_XML_CHARS, '');
 }
 
@@ -183,8 +183,8 @@ export function filterByMatch(
   }
 
   let masterDuplicateKeys = 0;
-  for (const count of masterKeySeen.values()) {
-    if (count > 1) masterDuplicateKeys++;
+  for (const [key, count] of masterKeySeen.entries()) {
+    if (key !== '' && count > 1) masterDuplicateKeys++;
   }
 
   const masterKeySet = new Set(masterKeySeen.keys());
@@ -214,7 +214,7 @@ export function autoDetectKeyColumn(headers: string[]): string {
     const match = normalized.find((n) => n.clean.toLowerCase().includes(kw.toLowerCase()));
     if (match) return match.original;
   }
-  return headers[0] || '';
+  return '';
 }
 
 /** Auto-detect Qixin column mappings from source headers */

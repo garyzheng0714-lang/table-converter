@@ -4,13 +4,16 @@ interface TemplateSelectorProps {
   onSelect: (template: ExportTemplate) => void;
   onBack: () => void;
   rowCount: number;
+  sheetCount: number;
 }
 
 export default function TemplateSelector({
   onSelect,
   onBack,
   rowCount,
+  sheetCount,
 }: TemplateSelectorProps) {
+  const canFilter = sheetCount >= 2;
   return (
     <div className="template-page">
       <div className="template-hero">
@@ -40,6 +43,19 @@ export default function TemplateSelector({
           <h3 className="template-card-title">电脑端 · 企信RPA</h3>
           <p className="template-card-desc">
             导出通讯录格式，用于企信群发
+          </p>
+        </button>
+        <button
+          className={`template-card${canFilter ? '' : ' template-card--disabled'}`}
+          onClick={() => { if (canFilter) onSelect('filter'); }}
+          disabled={!canFilter}
+        >
+          <div className="template-card-icon">🔍</div>
+          <h3 className="template-card-title">筛出未发送名单</h3>
+          <p className="template-card-desc">
+            {canFilter
+              ? `双表 VLOOKUP 匹配筛选（${sheetCount} 个工作表）`
+              : '需要含多个工作表的 Excel 文件'}
           </p>
         </button>
       </div>

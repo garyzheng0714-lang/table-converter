@@ -1,12 +1,14 @@
 import { useCallback, useState } from 'react';
-import type { AppConfig, ExportTemplate, ParsedData, QixinConfig } from './types';
-import { readExcel } from './lib/excel';
-import { autoDetectColumns, autoDetectQixinColumns } from './lib/transform';
+import type { AppConfig, ExportTemplate, FilterConfig, MultiSheetData, ParsedData, QixinConfig } from './types';
+import { readExcelAllSheets } from './lib/excel';
+import { autoDetectColumns, autoDetectKeyColumn, autoDetectQixinColumns } from './lib/transform';
 import FileUpload from './components/FileUpload';
 import TemplateSelector from './components/TemplateSelector';
 import ConfigPanel from './components/ConfigPanel';
 import QixinConfigPanel from './components/QixinConfigPanel';
 import PreviewPanel from './components/PreviewPanel';
+import FilterConfigPanel from './components/FilterConfigPanel';
+import FilterPreviewPanel from './components/FilterPreviewPanel';
 
 type Step = 1 | 2 | 3;
 
@@ -70,13 +72,22 @@ const initialQixinConfig: QixinConfig = {
   },
 };
 
+const initialFilterConfig: FilterConfig = {
+  masterSheetIndex: 0,
+  sentSheetIndex: 1,
+  masterKeyColumn: '',
+  sentKeyColumn: '',
+};
+
 export default function App() {
   const [step, setStep] = useState<Step>(1);
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
+  const [multiSheetData, setMultiSheetData] = useState<MultiSheetData | null>(null);
   const [fileName, setFileName] = useState('');
   const [exportTemplate, setExportTemplate] = useState<ExportTemplate | null>(null);
   const [config, setConfig] = useState<AppConfig>(initialConfig);
   const [qixinConfig, setQixinConfig] = useState<QixinConfig>(initialQixinConfig);
+  const [filterConfig, setFilterConfig] = useState<FilterConfig>(initialFilterConfig);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,7 +95,9 @@ export default function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await readExcel(file);
+      const allSheets = await readExcelAllSheets(file);
+      const data = allSheets.sheets[0]?.data || { headers: [], rows: [] };
+
       if (data.headers.length === 0) {
         setError('文件中没有找到表头，请检查文件格式');
         setIsLoading(false);
@@ -96,9 +109,10 @@ export default function App() {
         return;
       }
       setParsedData(data);
+      setMultiSheetData(allSheets);
       setFileName(file.name);
 
-      // Auto-detect columns for both templates
+      // Auto-detect columns for yingdao/qixin templates
       const yingdaoMapping = autoDetectColumns(data.headers);
       const qixinMapping = autoDetectQixinColumns(data.headers);
 
@@ -112,6 +126,16 @@ export default function App() {
         ...prev,
         columnMapping: qixinMapping,
       }));
+
+      // Auto-detect filter config if multiple sheets
+      if (allSheets.sheets.length >= 2) {
+        setFilterConfig({
+          masterSheetIndex: 0,
+          sentSheetIndex: 1,
+          masterKeyColumn: autoDetectKeyColumn(allSheets.sheets[0].data.headers),
+          sentKeyColumn: autoDetectKeyColumn(allSheets.sheets[1].data.headers),
+        });
+      }
 
       // Stay on step 1 — show template selector
       setExportTemplate(null);
@@ -132,10 +156,12 @@ export default function App() {
   const handleRestart = useCallback(() => {
     setStep(1);
     setParsedData(null);
+    setMultiSheetData(null);
     setFileName('');
     setExportTemplate(null);
     setConfig(initialConfig);
     setQixinConfig(initialQixinConfig);
+    setFilterConfig(initialFilterConfig);
     setError(null);
   }, []);
 
@@ -166,6 +192,7 @@ export default function App() {
               onSelect={handleTemplateSelect}
               onBack={handleRestart}
               rowCount={parsedData.rows.length}
+              sheetCount={multiSheetData?.sheets.length || 1}
             />
           </div>
         )}
@@ -195,13 +222,35 @@ export default function App() {
           </div>
         )}
 
-        {step === 3 && parsedData && exportTemplate && (
+        {step === 2 && multiSheetData && exportTemplate === 'filter' && (
+          <div className="step-enter">
+            <FilterConfigPanel
+              multiSheetData={multiSheetData}
+              filterConfig={filterConfig}
+              onConfigChange={setFilterConfig}
+              onBack={() => setStep(1)}
+              onNext={() => setStep(3)}
+            />
+          </div>
+        )}
+
+        {step === 3 && parsedData && exportTemplate && exportTemplate !== 'filter' && (
           <div className="step-enter">
             <PreviewPanel
               parsedData={parsedData}
               exportTemplate={exportTemplate}
               config={config}
               qixinConfig={qixinConfig}
+              onBack={() => setStep(2)}
+            />
+          </div>
+        )}
+
+        {step === 3 && multiSheetData && exportTemplate === 'filter' && (
+          <div className="step-enter">
+            <FilterPreviewPanel
+              multiSheetData={multiSheetData}
+              filterConfig={filterConfig}
               onBack={() => setStep(2)}
             />
           </div>

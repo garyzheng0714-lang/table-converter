@@ -1,5 +1,5 @@
 export type ScriptType = 'text' | 'article';
-export type ExportTemplate = 'yingdao' | 'qixin';
+export type ExportTemplate = 'yingdao' | 'qixin' | 'filter';
 
 export interface ScriptConfig {
   id: string;
@@ -41,4 +41,15 @@ export interface QixinConfig {
 export interface ParsedData {
   headers: string[];
   rows: Record<string, string>[];
+}
+
+export interface MultiSheetData {
+  sheets: { name: string; data: ParsedData }[];
+}
+
+export interface FilterConfig {
+  masterSheetIndex: number;
+  sentSheetIndex: number;
+  masterKeyColumn: string;
+  sentKeyColumn: string;
 }
