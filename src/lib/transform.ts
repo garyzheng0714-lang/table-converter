@@ -56,10 +56,12 @@ const QIXIN_HEADERS = [
 
 export function transformDataForQixin(
   sourceRows: Record<string, string>[],
-  qixinConfig: QixinConfig
+  qixinConfig: QixinConfig,
+  tagSuffix?: string
 ): Record<string, string>[] {
   const { wechatNickname, wechatId, contactType, columnMapping } = qixinConfig;
   const { nicknameColumn, wechatIdColumn, remarkColumn, greetingColumn } = columnMapping;
+  const tagValue = tagSuffix != null ? `表格导入${tagSuffix}` : '表格导入';
 
   return sourceRows.map((row) => {
     const result: Record<string, string> = {};
@@ -71,7 +73,7 @@ export function transformDataForQixin(
     result['名称'] = row[nicknameColumn] || '';
     result['微信号'] = row[wechatIdColumn] || '';
     result['备注'] = row[remarkColumn] || '';
-    result['标签'] = '表格导入';
+    result['标签'] = tagValue;
     result['打招呼自定义备注1'] = row[greetingColumn] || '';
 
     return result;

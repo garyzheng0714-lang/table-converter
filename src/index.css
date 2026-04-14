@@ -604,6 +604,42 @@ body {
   align-items: center; gap: 12px; margin-top: 8px;
 }
 
+/* ---- Split / Download area ---- */
+.download-area {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.split-settings {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--c-text-2);
+}
+.split-toggle {
+  display: flex; align-items: center; gap: 6px;
+  cursor: pointer; font-weight: 500; color: var(--c-text);
+  user-select: none;
+}
+.split-toggle input[type="checkbox"] {
+  width: 15px; height: 15px; cursor: pointer;
+  accent-color: var(--c-primary);
+}
+.split-sep { color: var(--c-border-hover); }
+.split-label { white-space: nowrap; }
+.split-input {
+  width: 64px; padding: 3px 6px;
+  border: 1px solid var(--c-border); border-radius: var(--r-sm);
+  font-size: 13px; text-align: center;
+  font-family: var(--font); background: var(--c-surface);
+  transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+.split-input:focus {
+  outline: none; border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px var(--c-primary-glow);
+}
+/* hide number input spinners for cleaner look */
+.split-input::-webkit-inner-spin-button,
+.split-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.split-input { -moz-appearance: textfield; }
+.split-info { color: var(--c-text-3); font-size: 12px; white-space: nowrap; }
+
 /* ---- Download confirmation dialog ---- */
 .dl-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.12);
@@ -717,6 +753,8 @@ body {
   .form-input { width: 100%; }
   .config-actions { flex-direction: column; }
   .preview-header { flex-direction: column; align-items: stretch; }
+  .download-area { align-items: stretch; }
+  .split-settings { flex-wrap: wrap; }
   .preview-header .btn { width: 100%; justify-content: center; }
   .template-page { padding-top: 40px; gap: 24px; }
   .template-title { font-size: 22px; }

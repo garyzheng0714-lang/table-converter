@@ -7,10 +7,11 @@ import {
   generateQixinFileName,
   generateQixinSheetName,
 } from '../lib/transform';
-import { downloadBlob, downloadExcel } from '../lib/excel';
+import { downloadBlob, downloadExcel, writeExcelToArrayBuffer, fallbackDownload } from '../lib/excel';
 import { renderWechatEmojiHTML } from '../lib/wechat-emoji';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const DEFAULT_ROWS_PER_FILE = 1000;
 
 interface PreviewPanelProps {
   parsedData: ParsedData;
@@ -28,15 +29,26 @@ export default function PreviewPanel({
   onBack,
 }: PreviewPanelProps) {
   const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState('');
+  const [splitEnabled, setSplitEnabled] = useState(true);
+  const [rowsPerFile, setRowsPerFile] = useState(DEFAULT_ROWS_PER_FILE);
+
   const isQixin = exportTemplate === 'qixin';
   const totalCount = parsedData.rows.length;
 
-  // #8: Only transform first 10 rows for preview — not all data
+  const chunkCount = splitEnabled && rowsPerFile > 0
+    ? Math.ceil(totalCount / rowsPerFile)
+    : 1;
+  const actualSplit = splitEnabled && chunkCount > 1;
+
   const previewData = useMemo(() => {
     const sample = parsedData.rows.slice(0, 10);
-    if (isQixin) return transformDataForQixin(sample, qixinConfig);
+    if (isQixin) {
+      const suffix = actualSplit ? '1' : undefined;
+      return transformDataForQixin(sample, qixinConfig, suffix);
+    }
     return transformData(sample, config);
-  }, [parsedData.rows, isQixin, config, qixinConfig]);
+  }, [parsedData.rows, isQixin, config, qixinConfig, actualSplit]);
 
   const fileName = isQixin
     ? generateQixinFileName(qixinConfig.wechatNickname, qixinConfig.wechatId)
@@ -57,7 +69,6 @@ export default function PreviewPanel({
     ? `${totalCount} 条数据 · 企信RPA格式`
     : `${totalCount} 条数据 · ${config.scripts.length} 条话术`;
 
-  // #7: Download — try Web Worker to keep UI responsive, fallback to main thread
   const handleDownload = useCallback(async () => {
     setDownloading(true);
     const sheetName = isQixin
@@ -65,46 +76,74 @@ export default function PreviewPanel({
       : undefined;
 
     try {
-      // Try worker path (module workers supported in modern Chrome/Edge/Firefox)
-      const worker = new Worker(
-        new URL('../lib/export.worker.ts', import.meta.url),
-        { type: 'module' },
-      );
+      if (actualSplit) {
+        const baseName = fileName.replace('.xlsx', '');
 
-      const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
-        worker.onmessage = (e: MessageEvent<ArrayBuffer>) => {
-          resolve(e.data);
-          worker.terminate();
-        };
-        worker.onerror = (err) => {
-          reject(err);
-          worker.terminate();
-        };
-        worker.postMessage({
-          rows: parsedData.rows,
-          isQixin,
-          config: isQixin ? undefined : config,
-          qixinConfig: isQixin ? qixinConfig : undefined,
-          sheetName,
-        });
-      });
+        for (let i = 0; i < chunkCount; i++) {
+          setDownloadProgress(`${i + 1}/${chunkCount}`);
+          const start = i * rowsPerFile;
+          const chunk = parsedData.rows.slice(start, start + rowsPerFile);
 
-      const blob = new Blob([buffer], { type: XLSX_MIME });
-      await downloadBlob(blob, fileName);
-    } catch {
-      // Fallback: worker unavailable (Safari <15, WebView, etc.) — run on main thread
-      try {
-        const allData = isQixin
-          ? transformDataForQixin(parsedData.rows, qixinConfig)
-          : transformData(parsedData.rows, config);
-        await downloadExcel(allData, fileName, { sheetName });
-      } catch {
-        alert('下载失败，请重试');
+          const chunkData = isQixin
+            ? transformDataForQixin(chunk, qixinConfig, String(i + 1))
+            : transformData(chunk, config);
+
+          const buffer = writeExcelToArrayBuffer(chunkData, { sheetName });
+          const blob = new Blob([buffer], { type: XLSX_MIME });
+          fallbackDownload(blob, `${baseName}_${i + 1}.xlsx`);
+
+          if (i < chunkCount - 1) {
+            await new Promise(r => setTimeout(r, 300));
+          }
+        }
+      } else {
+        // Single file — use worker for large datasets
+        try {
+          const worker = new Worker(
+            new URL('../lib/export.worker.ts', import.meta.url),
+            { type: 'module' },
+          );
+
+          const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+            worker.onmessage = (e: MessageEvent<ArrayBuffer>) => {
+              resolve(e.data);
+              worker.terminate();
+            };
+            worker.onerror = (err) => {
+              reject(err);
+              worker.terminate();
+            };
+            worker.postMessage({
+              rows: parsedData.rows,
+              isQixin,
+              config: isQixin ? undefined : config,
+              qixinConfig: isQixin ? qixinConfig : undefined,
+              sheetName,
+            });
+          });
+
+          const blob = new Blob([buffer], { type: XLSX_MIME });
+          await downloadBlob(blob, fileName);
+        } catch {
+          try {
+            const allData = isQixin
+              ? transformDataForQixin(parsedData.rows, qixinConfig)
+              : transformData(parsedData.rows, config);
+            await downloadExcel(allData, fileName, { sheetName });
+          } catch {
+            alert('下载失败，请重试');
+          }
+        }
       }
     } finally {
       setDownloading(false);
+      setDownloadProgress('');
     }
-  }, [parsedData.rows, isQixin, config, qixinConfig, fileName]);
+  }, [parsedData.rows, isQixin, config, qixinConfig, fileName, actualSplit, chunkCount, rowsPerFile]);
+
+  const downloadButtonText = downloading
+    ? (downloadProgress ? `正在下载 ${downloadProgress}...` : '正在生成...')
+    : (actualSplit ? `下载表格（${chunkCount} 个文件）` : '下载表格');
 
   return (
     <div className="preview-page">
@@ -113,13 +152,47 @@ export default function PreviewPanel({
           <h2 className="preview-title">预览：{fileName}</h2>
           <span className="preview-meta">{metaText}</span>
         </div>
-        <button
-          className="btn btn-primary btn-lg"
-          disabled={downloading}
-          onClick={handleDownload}
-        >
-          {downloading ? '正在生成...' : '下载表格'}
-        </button>
+        <div className="download-area">
+          <div className="split-settings">
+            <label className="split-toggle">
+              <input
+                type="checkbox"
+                checked={splitEnabled}
+                onChange={(e) => setSplitEnabled(e.target.checked)}
+              />
+              拆分下载
+            </label>
+            {splitEnabled && (
+              <>
+                <span className="split-sep">·</span>
+                <span className="split-label">每个表格</span>
+                <input
+                  type="number"
+                  className="split-input"
+                  value={rowsPerFile}
+                  min={100}
+                  max={10000}
+                  step={100}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (v > 0) setRowsPerFile(v);
+                  }}
+                />
+                <span className="split-label">行</span>
+                {chunkCount > 1 && (
+                  <span className="split-info">· 共 {chunkCount} 个文件</span>
+                )}
+              </>
+            )}
+          </div>
+          <button
+            className="btn btn-primary btn-lg"
+            disabled={downloading}
+            onClick={handleDownload}
+          >
+            {downloadButtonText}
+          </button>
+        </div>
       </div>
 
       <section className="preview-table-section">

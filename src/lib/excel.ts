@@ -139,7 +139,7 @@ function buildBlob(data: Record<string, string>[], options: WriteExcelOptions): 
   return new Blob([buffer], { type: XLSX_MIME });
 }
 
-function fallbackDownload(blob: Blob, fileName: string): void {
+export function fallbackDownload(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
