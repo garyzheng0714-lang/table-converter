@@ -7,7 +7,7 @@ import {
   generateQixinFileName,
   generateQixinSheetName,
 } from '../lib/transform';
-import { downloadBlob, downloadExcel, writeExcelToArrayBufferClean } from '../lib/excel';
+import { downloadBlob, downloadExcel, writeExcelToArrayBuffer } from '../lib/excel';
 import { renderWechatEmojiHTML } from '../lib/wechat-emoji';
 import JSZip from 'jszip';
 
@@ -79,8 +79,9 @@ export default function PreviewPanel({
     try {
       if (actualSplit) {
         const baseName = fileName.replace('.xlsx', '');
-        const zip = new JSZip();
 
+        // 生成每个分片的 xlsx（使用 SheetJS 原始输出，不经过 JSZip 重新打包）
+        const xlsxFiles: { name: string; buffer: ArrayBuffer }[] = [];
         for (let i = 0; i < chunkCount; i++) {
           setDownloadProgress(`${i + 1}/${chunkCount}`);
           const start = i * rowsPerFile;
@@ -90,14 +91,41 @@ export default function PreviewPanel({
             ? transformDataForQixin(chunk, qixinConfig, String(i + 1))
             : transformData(chunk, config);
 
-          const buffer = await writeExcelToArrayBufferClean(chunkData, { sheetName });
-          // xlsx 本身已是 zip 压缩，用 STORE 避免双重压缩导致兼容性问题
-          zip.file(`${baseName}_${i + 1}.xlsx`, buffer, { compression: 'STORE' });
+          const buffer = writeExcelToArrayBuffer(chunkData, { sheetName });
+          xlsxFiles.push({ name: `${baseName}_${i + 1}.xlsx`, buffer });
         }
 
-        setDownloadProgress('打包中...');
-        const zipBlob = await zip.generateAsync({ type: 'blob' });
-        await downloadBlob(zipBlob, `${baseName}.zip`, 'zip');
+        // 优先用 showDirectoryPicker 直接写入文件夹（避免 zip 兼容性问题）
+        let saved = false;
+        if (window.showDirectoryPicker) {
+          try {
+            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            for (let i = 0; i < xlsxFiles.length; i++) {
+              setDownloadProgress(`写入 ${i + 1}/${xlsxFiles.length}`);
+              const fileHandle = await dirHandle.getFileHandle(xlsxFiles[i].name, { create: true });
+              const writable = await fileHandle.createWritable();
+              await writable.write(xlsxFiles[i].buffer);
+              await writable.close();
+            }
+            saved = true;
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === 'AbortError') {
+              saved = true; // 用户取消
+            }
+            // 其他错误 → 回退到 zip 下载
+          }
+        }
+
+        // 回退：打包为 zip 下载
+        if (!saved) {
+          setDownloadProgress('打包中...');
+          const zip = new JSZip();
+          for (const f of xlsxFiles) {
+            zip.file(f.name, f.buffer, { compression: 'STORE' });
+          }
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          await downloadBlob(zipBlob, `${baseName}.zip`, 'zip');
+        }
       } else {
         // Single file — use worker for large datasets
         try {

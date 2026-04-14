@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
-import type { ParsedData } from '../types.js';
+import type { MultiSheetData, ParsedData } from '../types.js';
 
 declare global {
   interface Window {
@@ -8,6 +8,9 @@ declare global {
       suggestedName?: string;
       types?: { description: string; accept: Record<string, string[]> }[];
     }) => Promise<FileSystemFileHandle>;
+    showDirectoryPicker?: (options?: {
+      mode?: 'read' | 'readwrite';
+    }) => Promise<FileSystemDirectoryHandle>;
   }
 }
 
@@ -52,6 +55,37 @@ export function readExcel(file: File): Promise<ParsedData> {
         resolve(parseExcelBuffer(e.target?.result as ArrayBuffer));
       } catch (error) {
         reject(error);
+      }
+    };
+    reader.onerror = () => reject(new Error('文件读取失败，请重试'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parseWorkbookAllSheets(workbook: XLSX.WorkBook): MultiSheetData {
+  const sheets = workbook.SheetNames.map((sheetName) => {
+    const sheet = workbook.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, {
+      defval: '',
+      raw: false,
+    });
+    const headers = json.length > 0 ? Object.keys(json[0]) : [];
+    return { name: sheetName, data: { headers, rows: json } };
+  });
+  return { sheets };
+}
+
+export function readExcelAllSheets(file: File): Promise<MultiSheetData> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result as ArrayBuffer;
+        const uint8 = new Uint8Array(data);
+        const workbook = XLSX.read(uint8, { type: 'array', dense: true });
+        resolve(parseWorkbookAllSheets(workbook));
+      } catch {
+        reject(new Error('无法读取此文件，请确认是有效的 Excel 文件'));
       }
     };
     reader.onerror = () => reject(new Error('文件读取失败，请重试'));
