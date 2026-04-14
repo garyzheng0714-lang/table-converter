@@ -59,7 +59,7 @@ export function transformDataForQixin(
   qixinConfig: QixinConfig
 ): Record<string, string>[] {
   const { wechatNickname, wechatId, contactType, columnMapping } = qixinConfig;
-  const { nicknameColumn, wechatIdColumn, remarkColumn, tagColumn, greetingColumn } = columnMapping;
+  const { nicknameColumn, wechatIdColumn, remarkColumn, greetingColumn } = columnMapping;
 
   return sourceRows.map((row) => {
     const result: Record<string, string> = {};
@@ -71,7 +71,7 @@ export function transformDataForQixin(
     result['名称'] = row[nicknameColumn] || '';
     result['微信号'] = row[wechatIdColumn] || '';
     result['备注'] = row[remarkColumn] || '';
-    result['标签'] = row[tagColumn] || '';
+    result['标签'] = '表格导入';
     result['打招呼自定义备注1'] = row[greetingColumn] || '';
 
     return result;
