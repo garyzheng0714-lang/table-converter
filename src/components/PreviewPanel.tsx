@@ -7,7 +7,7 @@ import {
   generateQixinFileName,
   generateQixinSheetName,
 } from '../lib/transform';
-import { downloadBlob, downloadExcel, writeExcelToArrayBuffer, fallbackDownload } from '../lib/excel';
+import { downloadBlob, downloadExcel, writeExcelToArrayBufferClean } from '../lib/excel';
 import { renderWechatEmojiHTML } from '../lib/wechat-emoji';
 import JSZip from 'jszip';
 
@@ -90,13 +90,14 @@ export default function PreviewPanel({
             ? transformDataForQixin(chunk, qixinConfig, String(i + 1))
             : transformData(chunk, config);
 
-          const buffer = writeExcelToArrayBuffer(chunkData, { sheetName });
-          zip.file(`${baseName}_${i + 1}.xlsx`, buffer);
+          const buffer = await writeExcelToArrayBufferClean(chunkData, { sheetName });
+          // xlsx 本身已是 zip 压缩，用 STORE 避免双重压缩导致兼容性问题
+          zip.file(`${baseName}_${i + 1}.xlsx`, buffer, { compression: 'STORE' });
         }
 
         setDownloadProgress('打包中...');
         const zipBlob = await zip.generateAsync({ type: 'blob' });
-        fallbackDownload(zipBlob, `${baseName}.zip`);
+        await downloadBlob(zipBlob, `${baseName}.zip`, 'zip');
       } else {
         // Single file — use worker for large datasets
         try {

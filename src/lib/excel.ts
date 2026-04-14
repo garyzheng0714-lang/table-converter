@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 import type { ParsedData } from '../types.js';
 
 declare global {
@@ -123,6 +124,53 @@ function buildWorkbook(
   return wb;
 }
 
+/**
+ * 清理 SheetJS 生成的 xlsx 中多余的 metadata.xml（XLDAPR 动态数组元数据）。
+ * WPS Office 和部分旧版 Excel 无法识别此元数据，会报"文件已损坏"。
+ */
+async function stripXlsxMetadata(buffer: ArrayBuffer): Promise<ArrayBuffer> {
+  const zip = await JSZip.loadAsync(buffer);
+
+  if (!zip.files['xl/metadata.xml']) return buffer;
+
+  zip.remove('xl/metadata.xml');
+
+  // 清理 workbook.xml.rels 中的 metadata 引用
+  const relsFile = zip.files['xl/_rels/workbook.xml.rels'];
+  if (relsFile) {
+    const relsContent = await relsFile.async('string');
+    zip.file(
+      'xl/_rels/workbook.xml.rels',
+      relsContent.replace(/<Relationship[^>]*Target="metadata\.xml"[^>]*\/>/g, ''),
+    );
+  }
+
+  // 清理 [Content_Types].xml 中的 metadata Override
+  const ctFile = zip.files['[Content_Types].xml'];
+  if (ctFile) {
+    const ctContent = await ctFile.async('string');
+    zip.file(
+      '[Content_Types].xml',
+      ctContent.replace(/<Override[^>]*metadata\.xml[^>]*\/>/g, ''),
+    );
+  }
+
+  return zip.generateAsync({
+    type: 'arraybuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  });
+}
+
+export async function writeExcelToArrayBufferClean(
+  data: Record<string, string>[],
+  options: WriteExcelOptions = {},
+): Promise<ArrayBuffer> {
+  const wb = buildWorkbook(data, options);
+  const raw = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+  return stripXlsxMetadata(raw);
+}
+
 export function writeExcelToArrayBuffer(
   data: Record<string, string>[],
   options: WriteExcelOptions = {}
@@ -147,7 +195,8 @@ export function fallbackDownload(blob: Blob, fileName: string): void {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // 延迟释放 Blob URL，避免大文件下载未完成就被回收导致文件损坏
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 /**
@@ -191,21 +240,21 @@ export async function downloadExcel(
 
 /**
  * Download a pre-built Blob with native save-as picker when available.
+ * Supports both xlsx and zip file types via optional fileType param.
  */
 export async function downloadBlob(
   blob: Blob,
   fileName: string,
+  fileType: 'xlsx' | 'zip' = 'xlsx',
 ): Promise<boolean> {
+  const pickerTypes = fileType === 'zip'
+    ? [{ description: 'ZIP 压缩包', accept: { 'application/zip': ['.zip'] } }]
+    : [{ description: 'Excel 文件', accept: { [XLSX_MIME]: ['.xlsx'] } }];
+
   const picker = window.showSaveFilePicker;
   if (picker) {
     try {
-      const handle = await picker({
-        suggestedName: fileName,
-        types: [{
-          description: 'Excel 文件',
-          accept: { [XLSX_MIME]: ['.xlsx'] },
-        }],
-      });
+      const handle = await picker({ suggestedName: fileName, types: pickerTypes });
       const writable = await handle.createWritable();
       await writable.write(blob);
       await writable.close();
