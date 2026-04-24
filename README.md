@@ -1,30 +1,71 @@
 # 群发名单整理助手
 
-将微信好友导出的 CSV 文件转换为 RPA 群发工具所需的 Excel 格式。纯浏览器端处理，数据不上传服务器。
+群发名单整理助手是一个纯浏览器端运行的表格转换工具，用于把微信好友、客户名单或已发送名单整理成 RPA 工具需要的 Excel 格式。文件在本地浏览器中解析和导出，不上传到服务器。
 
 ## 功能
 
-- **上传 CSV** — 支持 `.csv` / `.xlsx` / `.xls`，自动识别列映射
-- **两种导出模板**
-  - 📱 **手机端 · 影刀RPA点对点** — 配置话术脚本（文字/文章卡片），支持微信表情、前缀称呼拼接，最多 5 条话术
-  - 💻 **电脑端 · 企信RPA** — 导出通讯录格式（20列），填写所属微信昵称/微信号/类型即可
-- **微信表情** — 支持 `[smile]` 等文本码在编辑器中实时预览，导出时转为 Unicode emoji
-- **聊天预览** — 影刀模板实时显示消息气泡效果
-- **自定义保存** — 支持系统原生"另存为"对话框选择保存位置（Chrome/Edge）
+- 支持上传 `.csv`、`.xlsx`、`.xls` 文件。
+- 自动读取工作表、表头和行数据，并为常见字段做列映射。
+- 提供三类处理模板：
+  - **手机端 · 影刀 RPA 点对点**：配置最多 5 条话术，支持文字、文章卡片占位、微信表情和称呼前缀。
+  - **电脑端 · 企信 RPA**：导出企信通讯录格式，包含所属微信、类型、昵称、微信号、备注、标签和打招呼字段。
+  - **名单过滤**：在多工作表文件中按关键列匹配主名单和已发送名单，筛出匹配记录并输出统计。
+- 支持微信表情文本码预览，并在导出时转换为 Unicode。
+- 提供聊天气泡预览和导出预览。
+- 支持浏览器原生“另存为”能力；不支持时回退为普通下载。
+- 对 Excel XML 非法控制字符做清理，降低导出文件损坏风险。
 
 ## 技术栈
 
-- React 18 + TypeScript
+- React 18
+- TypeScript
 - Vite 6
-- [SheetJS (xlsx)](https://sheetjs.com/) — Excel 读写
-- [wechat-emojis](https://www.npmjs.com/package/wechat-emojis) — 微信表情 PNG 资源
+- SheetJS (`xlsx`)
+- JSZip
+- `wechat-emojis`
 
-## 开发
+## 项目结构
+
+```text
+.
+├── src/
+│   ├── App.tsx                       # 三步流程和模板路由
+│   ├── types.ts                      # 配置、模板和解析数据类型
+│   ├── components/
+│   │   ├── FileUpload.tsx            # 文件上传
+│   │   ├── TemplateSelector.tsx      # 导出模板选择
+│   │   ├── ConfigPanel.tsx           # 影刀 RPA 配置
+│   │   ├── QixinConfigPanel.tsx      # 企信 RPA 配置
+│   │   ├── FilterConfigPanel.tsx     # 名单过滤配置
+│   │   ├── PreviewPanel.tsx          # RPA 导出预览
+│   │   ├── FilterPreviewPanel.tsx    # 过滤结果预览
+│   │   ├── ScriptCard.tsx            # 话术编辑器
+│   │   └── ChatPreview.tsx           # 聊天预览
+│   ├── lib/
+│   │   ├── excel.ts                  # Excel 读写和下载
+│   │   ├── export.worker.ts          # 导出 worker
+│   │   ├── transform.ts              # 数据转换、列识别和过滤
+│   │   ├── wechat-emoji.ts           # 微信表情 HTML 预览
+│   │   └── wechat-emoji-unicode.ts   # 微信表情转 Unicode
+│   └── index.css                     # 全局样式
+├── public/
+│   ├── logo.png
+│   └── emoji/                        # 微信表情资源
+├── scripts/
+│   └── perf-benchmark.mjs            # 性能基准脚本
+├── package.json
+├── vite.config.ts
+└── README.md
+```
+
+## 本地开发
 
 ```bash
 npm install
 npm run dev
 ```
+
+Vite 会启动本地开发服务器，具体地址以命令输出为准。
 
 ## 构建
 
@@ -32,44 +73,45 @@ npm run dev
 npm run build
 ```
 
-产物在 `dist/` 目录，可直接部署为静态站点。
+构建产物输出到 `dist/`，可作为静态站点部署。
+
+本地预览构建产物：
+
+```bash
+npm run preview
+```
+
+## 脚本
+
+```bash
+npm run dev          # 启动 Vite 开发服务器
+npm run build        # TypeScript 构建 + Vite 构建
+npm run preview      # 预览 dist 产物
+npm run perf:test    # 构建并运行性能基准脚本
+```
+
+## 使用流程
+
+1. 上传 CSV 或 Excel 文件。
+2. 选择导出模板。
+3. 确认或调整自动识别的列映射。
+4. 配置话术、所属微信、标签或过滤关键列。
+5. 在预览页检查结果并导出 `.xlsx` 文件。
 
 ## 数据流
 
-```
-CSV/Excel 文件
-  ↓ readExcel()
-ParsedData { headers, rows }
-  ↓ autoDetectColumns() / autoDetectQixinColumns()
-ColumnMapping / QixinColumnMapping
-  ↓ 用户配置
-AppConfig / QixinConfig
-  ↓ transformData() / transformDataForQixin()
-导出数据 Record<string, string>[]
+```text
+CSV / Excel 文件
+  ↓ readExcelAllSheets()
+MultiSheetData / ParsedData
+  ↓ autoDetectColumns() / autoDetectQixinColumns() / autoDetectKeyColumn()
+模板配置
+  ↓ transformData() / transformDataForQixin() / filterByMatch()
+导出数据
   ↓ downloadExcel()
-.xlsx 文件（支持自选保存位置）
+.xlsx 文件
 ```
 
-## 项目结构
+## 隐私说明
 
-```
-src/
-├── App.tsx                    # 主应用，步骤流程控制
-├── types.ts                   # 类型定义
-├── main.tsx                   # 入口
-├── index.css                  # 设计系统 + 全局样式
-├── components/
-│   ├── FileUpload.tsx         # 步骤1：文件上传（拖拽）
-│   ├── TemplateSelector.tsx   # 步骤1.5：选择导出模板
-│   ├── ConfigPanel.tsx        # 步骤2A：影刀RPA配置
-│   ├── QixinConfigPanel.tsx   # 步骤2B：企信RPA配置
-│   ├── PreviewPanel.tsx       # 步骤3：预览 + 下载
-│   ├── ScriptCard.tsx         # 话术卡片编辑器
-│   ├── ChatPreview.tsx        # 聊天气泡预览
-│   └── DataCard.tsx           # 数据源卡片
-└── lib/
-    ├── excel.ts               # Excel 读写 + 下载
-    ├── transform.ts           # 数据转换 + 列映射
-    ├── wechat-emoji.ts        # 微信表情 → HTML 渲染
-    └── wechat-emoji-unicode.ts # 微信表情 → Unicode 转换
-```
+本工具在浏览器中完成文件解析、转换和导出。除非部署方自行修改代码接入服务端，否则源表格数据不会离开用户的浏览器环境。
